@@ -1,3 +1,11 @@
+# Added
+*.s
+bochsout.txt
+system
+bootsect
+user
+build 
+
 # Compiled files
 *.bin
 
