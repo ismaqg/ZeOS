@@ -9,8 +9,8 @@
 
 DWord get_eflags(void);
 void set_eflags(void);
-void set_idt_reg(Register * idt);
-void set_gdt_reg(Register * gdt);
+void set_idt_reg(Register *idt);
+void set_gdt_reg(Register *gdt);
 void set_ldt_reg(Selector ldt);
 void set_task_reg(Selector tr);
 void return_gate(Word ds, Word ss, DWord esp, Word cs, DWord eip);
@@ -38,4 +38,4 @@ void return_gate(Word ds, Word ss, DWord esp, Word cs, DWord eip);
 
 void enable_int(void);
 void delay(void);
-#endif  /* __HARDWARE_H__ */
+#endif /* __HARDWARE_H__ */

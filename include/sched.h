@@ -10,58 +10,66 @@
 #include <mm_address.h>
 #include <stats.h>
 
-
-#define NR_TASKS      10
-#define KERNEL_STACK_SIZE	1024
+#define NR_TASKS 10
+#define KERNEL_STACK_SIZE 1024
 
 #define MAX_MUTEXES 20
 
-enum state_t { ST_RUN, ST_READY, ST_BLOCKED, ST_ZOMBIE };
+enum state_t
+{
+  ST_RUN,
+  ST_READY,
+  ST_BLOCKED,
+  ST_ZOMBIE
+};
 
-struct tls_t {
-  void* value;
+struct tls_t
+{
+  void *value;
   int used;
 };
 
-struct task_struct {
-  int PID;			/* Process ID. This MUST be the first field of the struct. */
-  page_table_entry * dir_pages_baseAddr;
-  struct list_head list;	/* Task struct enqueuing */
-  int register_esp;		/* position in the stack */ //Es el kernel_esp de mi ZeOS.
-  enum state_t state;		/* State of the process */
-  int total_quantum;		/* Total quantum of the process */
-  struct stats p_stats;		/* Process stats */
+struct task_struct
+{
+  int PID; /* Process ID. This MUST be the first field of the struct. */
+  page_table_entry *dir_pages_baseAddr;
+  struct list_head list;                        /* Task struct enqueuing */
+  int register_esp; /* position in the stack */ //Es el kernel_esp de mi ZeOS.
+  enum state_t state;                           /* State of the process */
+  int total_quantum;                            /* Total quantum of the process */
+  struct stats p_stats;                         /* Process stats */
 
   int TID;
   int quantum_thread;
-  struct task_struct * joined;
+  struct task_struct *joined;
   int errno;
   struct tls_t TLS[64];
-  struct list_head * threads_process;
-  int retval; 
+  struct list_head *threads_process;
+  int retval;
 };
 
-union task_union {
+union task_union
+{
   struct task_struct task;
-  unsigned long stack[KERNEL_STACK_SIZE];    /* pila de sistema, per procés */
+  unsigned long stack[KERNEL_STACK_SIZE]; /* pila de sistema, per procés */
 };
 
-struct mutex_t {
+struct mutex_t
+{
   int tid_owner;
-  struct list_head * blocked;
+  struct list_head *blocked;
   int initialized;
 };
 
 extern struct mutex_t mutexes[MAX_MUTEXES];
 
-extern union task_union protected_tasks[NR_TASKS+2];
+extern union task_union protected_tasks[NR_TASKS + 2];
 extern union task_union *task; /* Vector de tasques */
 extern struct task_struct *idle_task;
 
+#define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
 
-#define KERNEL_ESP(t)       	(DWord) &(t)->stack[KERNEL_STACK_SIZE]
-
-#define INITIAL_ESP       	KERNEL_ESP(&task[1])
+#define INITIAL_ESP KERNEL_ESP(&task[1])
 
 extern struct list_head freequeue;
 extern struct list_head readyqueue;
@@ -75,10 +83,10 @@ void init_sched(void);
 
 void schedule(void);
 
-struct task_struct * current();
+struct task_struct *current();
 
-void task_switch(union task_union*t);
-void switch_stack(int * save_sp, int new_sp);
+void task_switch(union task_union *t);
+void switch_stack(int *save_sp, int new_sp);
 
 void sched_next_rr(void);
 
@@ -88,9 +96,9 @@ struct task_struct *list_head_to_task_struct(struct list_head *l);
 
 int allocate_DIR(struct task_struct *t);
 
-page_table_entry * get_PT (struct task_struct *t) ;
+page_table_entry *get_PT(struct task_struct *t);
 
-page_table_entry * get_DIR (struct task_struct *t) ;
+page_table_entry *get_DIR(struct task_struct *t);
 
 /* Headers for the scheduling policy */
 void sched_next_rr();
@@ -100,4 +108,4 @@ void update_sched_data_rr();
 
 void init_stats(struct stats *s);
 
-#endif  /* __SCHED_H__ */
+#endif /* __SCHED_H__ */

@@ -30,8 +30,11 @@ SYSOBJ = interrupt.o entry.o sys_call_table.o io.o sched.o sys.o mm.o devices.o 
 
 LIBZEOS = -L . -l zeos -l auxjp
 
+TESTC:=$(wildcard test/*.c)
+TESTO:=$(TESTC:.c=.o)
+
 #add to USROBJ the object files required to complete the user program
-USROBJ = libc.o user-utils.o # libjp.a
+USROBJ = libc.o user-utils.o $(TESTO) # libjp.a
 
 all:zeos.bin
 
@@ -64,7 +67,9 @@ kernel-utils.s: kernel-utils.S $(INCLUDEDIR)/asm.h
 sys_call_table.s: sys_call_table.S $(INCLUDEDIR)/asm.h $(INCLUDEDIR)/segment.h
 	$(CPP) $(ASMFLAGS) -o $@ $<
 
-user.o:user.c $(INCLUDEDIR)/libc.h
+test/%.o: test/%.c $(INCLUDEDIR)/libc.h
+
+user.o:user.c $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/test.h
 
 interrupt.o:interrupt.c $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h
 
@@ -88,12 +93,12 @@ system.o:system.c $(INCLUDEDIR)/hardware.h system.lds $(SYSOBJ) $(INCLUDEDIR)/se
 system: system.o system.lds $(SYSOBJ)
 	$(LD) $(LINKFLAGS) $(SYSLDFLAGS) -o $@ $< $(SYSOBJ) $(LIBZEOS) 
 
-user: user.o user.lds $(USROBJ) 
+user: user.o user.lds $(USROBJ)
 	$(LD) $(LINKFLAGS) $(USRLDFLAGS) -o $@ $< $(USROBJ)
 
 
 clean:
-	rm -f *.o *.s bochsout.txt parport.out system.out system bootsect zeos.bin user user.out *~ build 
+	rm -f *.o test/*.o *.s bochsout.txt parport.out system.out system bootsect zeos.bin user user.out *~ build 
 
 disk: zeos.bin
 	dd if=zeos.bin of=/dev/fd0
