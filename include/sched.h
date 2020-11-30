@@ -35,7 +35,7 @@ struct task_struct {
   int TID;
   int quantum_thread;
   struct task_struct * joined;
-  unsigned long frame_errno;
+  int errno;
   struct tls_t TLS[64];
   struct list_head * threads_process;
   int retval; 
