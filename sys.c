@@ -20,6 +20,8 @@
 #define LECTURA 0
 #define ESCRIPTURA 1
 
+struct mutex_t mutexes[MAX_MUTEXES];
+
 void * get_ebp();
 
 int check_fd(int fd, int permissions)

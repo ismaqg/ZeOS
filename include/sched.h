@@ -14,7 +14,14 @@
 #define NR_TASKS      10
 #define KERNEL_STACK_SIZE	1024
 
-enum state_t { ST_RUN, ST_READY, ST_BLOCKED };
+#define MAX_MUTEXES 20
+
+enum state_t { ST_RUN, ST_READY, ST_BLOCKED, ST_ZOMBIE };
+
+struct tls_t {
+  void* value;
+  int used;
+};
 
 struct task_struct {
   int PID;			/* Process ID. This MUST be the first field of the struct. */
@@ -24,12 +31,28 @@ struct task_struct {
   enum state_t state;		/* State of the process */
   int total_quantum;		/* Total quantum of the process */
   struct stats p_stats;		/* Process stats */
+
+  int TID;
+  int quantum_thread;
+  struct task_struct * joined;
+  unsigned long frame_errno;
+  struct tls_t TLS[64];
+  struct list_head * threads_process;
+  int retval; 
 };
 
 union task_union {
   struct task_struct task;
   unsigned long stack[KERNEL_STACK_SIZE];    /* pila de sistema, per procés */
 };
+
+struct mutex_t {
+  int tid_owner;
+  struct list_head * blocked;
+  int initialized;
+};
+
+extern struct mutex_t mutexes[MAX_MUTEXES];
 
 extern union task_union protected_tasks[NR_TASKS+2];
 extern union task_union *task; /* Vector de tasques */
