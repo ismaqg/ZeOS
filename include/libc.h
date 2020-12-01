@@ -11,6 +11,7 @@
 
 #define true 1
 #define false 0
+#define NULL 0
 
 extern int errno;
 
@@ -35,11 +36,11 @@ int yield();
 
 int get_stats(int pid, struct stats *st);
 
-int pthread_create(int* TID, void* (*start_routine)(), void* arg);
+int pthread_create(int *TID, void *(*start_routine)(), void *arg);
 
 void pthread_exit(int retval);
 
-int pthread_join(int TID, int* retval);
+int pthread_join(int TID, int *retval);
 
 int mutex_init();
 
@@ -53,8 +54,8 @@ int pthread_key_create();
 
 int pthread_key_delete(int key);
 
-void* pthread_getspecific(int key);
+void *pthread_getspecific(int key);
 
-int pthread_setspecific(int key, void* value);
+int pthread_setspecific(int key, void *value);
 
 #endif /* __LIBC_H__ */
