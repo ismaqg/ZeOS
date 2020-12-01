@@ -15,4 +15,9 @@ SECTIONS
   .rodata : { *(.rodata) }      /* Read Only Data */
   .data : { *(.data) }          /* Normal Data */
   .bss : { *(.bss) }            /* Uninitialized Data */
+
+
+  . = 0x109000; /*Isma: Seccion añadida en la direccion 0x109000 para almacenar errno. Ahora la variable errno tendra siempre esta direccion*/
+  .MySection : { *(.MySection) } /*Isma: Nota que ahora la cabecera de errno en el lib.c es así:
+				      int errno __attribute__((section(".MySection")));*/
 }
