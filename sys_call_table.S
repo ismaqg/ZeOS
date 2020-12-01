@@ -39,8 +39,8 @@ ENTRY (sys_call_table)
 	.long sys_ni_syscall	//34
 	.long sys_get_stats	//35
 	.long sys_pthread_create	//36
-	.long sys_pthread_join  	//37
-	.long sys_pthread_exit  	//38
+	.long sys_pthread_exit  	//37
+	.long sys_pthread_join  	//38
 	.long sys_mutex_init    	//39
 	.long sys_mutex_destroy    	//40
 	.long sys_mutex_lock    	//41
