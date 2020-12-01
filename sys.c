@@ -245,3 +245,47 @@ int sys_get_stats(int pid, struct stats *st)
   }
   return -ESRCH; /*ESRCH */
 }
+
+int sys_pthread_create(int* TID, void* (*start_routine)(), void* arg){
+	return 0;
+}
+
+void sys_pthread_exit(int retval){
+
+}
+
+int sys_pthread_join(int TID, int* retval){
+	return 0;
+}
+
+int sys_mutex_init(){
+	return 0;
+}
+
+int sys_mutex_destroy(int mutex_id){
+	return 0;
+}
+
+int sys_mutex_lock(int mutex_id){
+	return 0;
+}
+
+int sys_mutex_unlock(int mutex_id){
+	return 0;
+}
+
+int sys_pthread_key_create(){
+	return 0;
+}
+
+int sys_pthread_key_delete(int key){
+	return 0;
+}
+
+void* sys_pthread_getspecific(int key){
+	return 0;
+}
+
+int sys_pthread_setspecific(int key, void* value){
+	return 0;
+}

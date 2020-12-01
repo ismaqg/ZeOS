@@ -38,5 +38,16 @@ ENTRY (sys_call_table)
 	.long sys_ni_syscall	//33
 	.long sys_ni_syscall	//34
 	.long sys_get_stats	//35
+	.long sys_pthread_create	//36
+	.long sys_pthread_join  	//37
+	.long sys_pthread_exit  	//38
+	.long sys_mutex_init    	//39
+	.long sys_mutex_destroy    	//40
+	.long sys_mutex_lock    	//41
+	.long sys_mutex_unlock    	//42
+	.long sys_pthread_key_create   	//43
+	.long sys_pthread_key_delete   	//44
+	.long sys_pthread_getspecific  	//45
+	.long sys_pthread_setspecific  	//46	
 .globl MAX_SYSCALL
 MAX_SYSCALL = (. - sys_call_table)/4
