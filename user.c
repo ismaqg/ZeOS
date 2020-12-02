@@ -57,19 +57,44 @@ main(void)
   /* Next line, tries to move value 0 to CR3 register. This register is a privileged one, and so it will raise an exception */
   /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
 
+  /* Write TestCase */
   test("Write success", &write_success, true, true);
   test("Write fails invalid file descriptor", &write_fails_invalid_file_descriptor, true, false);
+
+  /* Pthread_create TestCase */
   test("Pthread_create success", &pthread_create_success, true, false);
+
+  /* Pthread_exit TestCase */
   test("Pthread_exit success", &pthread_exit_success, true, false);
+
+  /* Pthread_join TestCase */
   test("Pthread_join success", &pthread_join_success, true, false);
+
+  /* Mutex_init TestCase */
   test("Mutex_init success", &mutex_init_success, true, false);
+
+  /* Mutex_destroy TestCase */
   test("Mutex_destroy success", &mutex_destroy_success, true, false);
+
+  /* Mutex_lock TestCase */
   test("Mutex_lock success", &mutex_lock_success, true, false);
+
+  /* Mutex_unlock TestCase */
   test("Mutex_unlock success", &mutex_unlock_success, true, false);
+
+  /* Pthread_key_create TestCase */
   test("Pthread_key_create success", &pthread_key_create_success, true, false);
+
+  /* Pthread_key_delete TestCase */
   test("Pthread_key_delete success", &pthread_key_delete_success, true, false);
+
+  /* Pthread_getspecific TestCase */
   test("Pthread_getspecific success", &pthread_getspecific_success, true, false);
+
+  /* Pthread_setspecific TestCase */
   test("Pthread_setspecific success", &pthread_setspecific_success, true, false);
+
+  /* Errno TestCase */
   test("Modify errno", &errno_success, true, false);
 
   while (1)

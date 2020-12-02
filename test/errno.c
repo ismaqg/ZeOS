@@ -14,5 +14,8 @@ int errno_success(void)
     if (*perrno != 21)
         return false;
 
+    if (errno != 21)
+        return false;
+
     return true;
 }
