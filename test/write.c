@@ -1,12 +1,10 @@
 #include <libc.h>
 
-char buff[256];
-
 int write_success(void)
 {
     int ret = write(1, "HOLA", 4);
 
-    return (ret == 4 ? true : false);
+    return (ret == 4);
 }
 
 int write_fails_invalid_file_descriptor(void)

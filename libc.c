@@ -6,7 +6,7 @@
 
 #include <types.h>
 
-int errno;
+int errno __attribute__((section(".ErrnoSection"))); // Isma: Este cambio viene de la mano con el cambio de user.lds
 
 void itoa(int a, char *b)
 {

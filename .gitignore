@@ -4,7 +4,8 @@ bochsout.txt
 system
 bootsect
 user
-build 
+build
+.vscode/
 
 # Compiled files
 *.bin
