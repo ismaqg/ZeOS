@@ -221,7 +221,7 @@ void sys_exit()
   case 1: // TODO : delete debug
     panic("There is a thread of the same process in READY state after sys_exit");
     break;
-  default: // empty ready_queue
+  default: // Switch to idle_task as the readyqueue is empty
     sched_next_rr(idle_task);
     break;
   }
