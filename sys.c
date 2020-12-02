@@ -213,16 +213,17 @@ void sys_exit()
   current()->PID = -1;
 
   /* Restarts execution of the next process */
-  switch(sched_next_decide_level()){ //
-	case 2:
-		sched_next_rr_level2();
-		break;
-	case 1:
-		println("ERROR: algun thread aun en ready al final de sys_exit");
-		break;
-	default: // empty ready_queue
-		sched_next_rr(idle_task);
-		break;
+  switch (sched_next_decide_level())
+  {
+  case 2:
+    sched_next_rr_level2();
+    break;
+  case 1: // TODO : delete debug
+    panic("There is a thread of the same process in READY state after sys_exit");
+    break;
+  default: // empty ready_queue
+    sched_next_rr(idle_task);
+    break;
   }
 }
 

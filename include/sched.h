@@ -50,7 +50,7 @@ struct task_struct
   int errno;
   struct tls_t TLS[TLS_SIZE];
   struct list_head *threads_process; // isma: puntero al centinela de la cola de threads de un mismo proceso
-  struct list_head list_threads; // isma: para poder encolarse en la cola "threads_process"
+  struct list_head list_threads;     // isma: para poder encolarse en la cola "threads_process"
   int retval;
 };
 
@@ -96,12 +96,6 @@ struct task_struct *current();
 void task_switch(union task_union *t);
 void switch_stack(int *save_sp, int new_sp);
 
-void sched_next_rr(struct task_struct *t);
-void sched_next_rr_level1(void);
-void sched_next_rr_level2(void);
-
-int sched_next_decide_level(void);
-
 void force_task_switch(void);
 
 struct task_struct *list_head_to_task_struct(struct list_head *l);
@@ -113,11 +107,16 @@ page_table_entry *get_PT(struct task_struct *t);
 page_table_entry *get_DIR(struct task_struct *t);
 
 /* Headers for the scheduling policy */
-void sched_next_rr();
+void sched_next_rr(struct task_struct *new);
 void update_process_state_rr(struct task_struct *t, struct list_head *dest);
 int needs_sched_rr();
 void update_sched_data_rr();
+void sched_next_rr_level1(void);
+void sched_next_rr_level2(void);
+
+int sched_next_decide_level(void);
 
 void init_stats(struct stats *s);
+void init_tls(struct task_struct *t);
 
 #endif /* __SCHED_H__ */

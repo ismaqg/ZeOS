@@ -68,7 +68,7 @@ void printc_color(Byte color, char c)
   }
 }
 
-void printc_scroll(char c)
+void printc_scroll(char c, Byte color)
 {
   __asm__ __volatile__("movb %0, %%al; outb $0xe9" ::"a"(c)); /* Magic BOCHS debug: writes 'c' to port 0xe9 */
 
@@ -98,7 +98,7 @@ void printc_scroll(char c)
   }
   else
   {
-    Word ch = (Word)(c & 0x00FF) | 0x0200;
+    Word ch = (Word)(c & 0x00FF) | (color << 8); // (Word)(c & 0x00FF) | 0x0200;
     Word *screen = (Word *)0xb8000;
     screen[(y * NUM_COLUMNS + x)] = ch;
     if (++x >= NUM_COLUMNS)
@@ -125,11 +125,24 @@ void printk(char *string)
 {
   int i;
   for (i = 0; string[i]; i++)
-    printc_scroll(string[i]);
+    printc_scroll(string[i], 0x02);
 }
 
 void println(char *string)
 {
   printk("\n");
   printk(string);
+}
+
+void printk_color(char *string, Byte color)
+{
+  int i;
+  for (i = 0; string[i]; i++)
+    printc_scroll(string[i], color);
+}
+
+void panic(char *string)
+{
+  printk_color("\n[ERROR]: ", 0x04);
+  printk_color(string, 0x04);
 }
