@@ -213,7 +213,17 @@ void sys_exit()
   current()->PID = -1;
 
   /* Restarts execution of the next process */
-  sched_next_rr();
+  switch(sched_next_decide_level()){ //
+	case 2:
+		sched_next_rr_level2();
+		break;
+	case 1:
+		println("ERROR: algun thread aun en ready al final de sys_exit");
+		break;
+	default: // empty ready_queue
+		sched_next_rr(idle_task);
+		break;
+  }
 }
 
 /* System call to force a task switch */
@@ -223,7 +233,8 @@ int sys_yield()
   return 0;
 }
 
-extern int remaining_quantum;
+extern int remaining_quantum_process;
+extern int remaining_quantum_thread;
 
 int sys_get_stats(int pid, struct stats *st)
 {
@@ -238,7 +249,7 @@ int sys_get_stats(int pid, struct stats *st)
   {
     if (task[i].task.PID == pid)
     {
-      task[i].task.p_stats.remaining_ticks = remaining_quantum;
+      task[i].task.p_stats.remaining_ticks = remaining_quantum_process;
       copy_to_user(&(task[i].task.p_stats), st, sizeof(struct stats));
       return 0;
     }
@@ -292,7 +303,7 @@ int sys_pthread_key_delete(int key)
 
 void *sys_pthread_getspecific(int key)
 {
-  return 45;
+  return (void *)45;
 }
 
 int sys_pthread_setspecific(int key, void *value)
