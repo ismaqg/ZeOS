@@ -13,7 +13,12 @@
 #define NR_TASKS 10
 #define KERNEL_STACK_SIZE 1024
 
+#define DEFAULT_QUANTUM_PROCESS 30
+#define DEFAULT_QUANTUM_THREAD 10
+
 #define MAX_MUTEXES 20
+
+#define TLS_SIZE 64
 
 enum state_t
 {
@@ -43,7 +48,7 @@ struct task_struct
   int quantum_thread;
   struct task_struct *joined;
   int errno;
-  struct tls_t TLS[64];
+  struct tls_t TLS[TLS_SIZE];
   struct list_head *threads_process;
   int retval;
 };
@@ -88,7 +93,11 @@ struct task_struct *current();
 void task_switch(union task_union *t);
 void switch_stack(int *save_sp, int new_sp);
 
-void sched_next_rr(void);
+void sched_next_rr(struct task_struct *t);
+void sched_next_rr_level1(void);
+void sched_next_rr_level2(void);
+
+int sched_next_decide_level(void);
 
 void force_task_switch(void);
 
