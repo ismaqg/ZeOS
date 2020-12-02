@@ -49,7 +49,8 @@ struct task_struct
   struct task_struct *joined;
   int errno;
   struct tls_t TLS[TLS_SIZE];
-  struct list_head *threads_process;
+  struct list_head *threads_process; // isma: puntero al centinela de la cola de threads de un mismo proceso
+  struct list_head list_threads; // isma: para poder encolarse en la cola "threads_process"
   int retval;
 };
 
@@ -59,10 +60,10 @@ union task_union
   unsigned long stack[KERNEL_STACK_SIZE]; /* pila de sistema, per procés */
 };
 
-struct mutex_t
+struct mutex_t // isma: declaracion de la struct debe estar antes de su uso para declarar el vector de mutexes. Comprobado
 {
   int tid_owner;
-  struct list_head *blocked;
+  struct list_head blockedqueue; // isma: centinela de la blockedqueue. Un thread se encolara aqui a traves del campo 'list' de su task_struct
   int initialized;
 };
 
@@ -71,6 +72,8 @@ extern struct mutex_t mutexes[MAX_MUTEXES];
 extern union task_union protected_tasks[NR_TASKS + 2];
 extern union task_union *task; /* Vector de tasques */
 extern struct task_struct *idle_task;
+
+extern struct list_head threads_processes[NR_TASKS]; // isma: vector de centinelas de las colas de threads de un mismo proceso. Cada proceso tiene su cola (max de NR_TASKS colas, porque hay un maximo de NR_TASKS procesos).
 
 #define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
 

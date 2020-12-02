@@ -220,7 +220,7 @@ void sys_exit()
 	case 1:
 		println("ERROR: algun thread aun en ready al final de sys_exit");
 		break;
-	default:
+	default: // empty ready_queue
 		sched_next_rr(idle_task);
 		break;
   }
@@ -303,7 +303,7 @@ int sys_pthread_key_delete(int key)
 
 void *sys_pthread_getspecific(int key)
 {
-  return 45;
+  return (void *)45;
 }
 
 int sys_pthread_setspecific(int key, void *value)

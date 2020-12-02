@@ -6,7 +6,7 @@ int errno_success(void)
     if (errno != 31)
         return false;
 
-    int *perrno = 0x109000;
+    int *perrno = (int *)0x109000;
     if (*perrno != 31)
         return false;
 

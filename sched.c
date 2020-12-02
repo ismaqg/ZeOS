@@ -126,14 +126,24 @@ int needs_sched_rr(void) // isma: Solo se llamara en tick de reloj
 
    //si llegamos aqui: ready NO vacia, en RUN NO idle_task y algún quantum está finalizado
 
+   struct list_head *pos; 
+   struct task_struct *t_thread_same_process = NULL;
+   struct task_struct *t_thread_different_process = NULL;
+   list_for_each(pos, &readyqueue){
+	 struct task_struct *t = list_head_to_task_struct(pos);
+	 if(t_thread_same_process == NULL && t->PID == current()->PID) t_thread_same_process = t;
+	 else if(t_thread_different_process == NULL && t->PID != current()->PID) t_thread_different_process = t;
+   }
+
    if(remaining_quantum_thread <= 0 && remaining_quantum_process > 0){
-	if(1) return 1; /*AQUI QUEDA MIRAR TEMA PATEARSE LISTAS*/
-	else return 0;
+	if(t_thread_same_process != NULL)
+		return 1; 
+	return 0;
    }
 
    //si llegamos aqui: ready NO vacia, en RUN NO idle_task y quantum proceso finalizado (<=0) SEGURO (y el de thread no se sabe)
 
-   if(1) return 2; /*MIRO SI EN READY HAY ALGUN OTRO PROCESO DISTINTO*/
+   if(t_thread_different_process != NULL) return 2; 
 	
    //si llegamos aqui, como ready NO vacia, es que sé al 100% que en ready hay otros threads de mi mismo proceso (pero no de otro)
 
@@ -144,7 +154,6 @@ int needs_sched_rr(void) // isma: Solo se llamara en tick de reloj
    
 }
 
-/*QUEDA PENSAR SI HAY QUE CAMBIARLA POR EL ESTADO ZOMBIE*/
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 {
   if (t->state != ST_RUN)
@@ -181,12 +190,21 @@ void sched_next_rr(struct task_struct *t)
 //planificador de 1r nivel (thread mismo proceso)
 void sched_next_rr_level1(void) // A esta funcion solo se la llamara cuando tengamos seguro al 100% que en ready quedan threads DEL MISMO proceso
 {
-	struct task_struct *t; // isma: t es el nuevo que entra a run
-	struct list_head *e;
-	/*ME PASEO READY HASTA ENCONTRAR AL 1R TIO CON UN PID IGUAL AL MIO*/
-	if(e == NULL) println("se ha ejecutado sched_level2 con solo threads de otros procesos en ready");
-        list_del(e);
-	t = list_head_to_task_struct(e);
+	//solo entrara en esta funcion si readyqueue NO vacia
+
+	struct task_struct *t = NULL; // isma: t es el nuevo que entra a run	
+	struct list_head *pos; 
+	list_for_each(pos, &readyqueue){
+		 struct task_struct *tmp = list_head_to_task_struct(pos);
+		 if(tmp->PID == current()->PID){
+			t = tmp;
+			break;
+		 } 
+	}
+
+
+	if(t == NULL) println("ERROR: se ha ejecutado sched_level2 con solo threads de otros procesos en ready");
+        list_del(&(t->list));
 
         sched_next_rr(t);
 
@@ -195,17 +213,26 @@ void sched_next_rr_level1(void) // A esta funcion solo se la llamara cuando teng
 //planificador 2o nivel (thread distinto proceso)
 void sched_next_rr_level2(void) // A esta funcion solo se la llamara cuando tengamos seguro al 100% que en ready hay otro proceso DISTINTO
 {
-	struct task_struct *t;
-	struct list_head *e;
-	/*ME PASEO READY HASTA ENCONTRAR AL 1R TIO CON UN PID DISTINTO AL MIO*/
-	if(e == NULL) println("se ha ejecutado sched_level2 con solo threads del mismo proceso en ready");
-        list_del(e);
-	t = list_head_to_task_struct(e);
+	//solo entrara en esta funcion si readyqueue NO vacia
 
-	sched_next_rr(t);
+	struct task_struct *t = NULL; // isma: t es el nuevo que entra a run	
+	struct list_head *pos; 
+	list_for_each(pos, &readyqueue){
+		 struct task_struct *tmp = list_head_to_task_struct(pos);
+		 if(tmp->PID != current()->PID){
+			t = tmp;
+			break;
+		 } 
+	}
+
+
+	if(t == NULL) println("ERROR: se ha ejecutado sched_level2 con solo threads del mismo procesos en ready");
+        list_del(&(t->list));
+
+        sched_next_rr(t);
 }
 
-//0: Si no hay que llamar a ningun planificador de ningun nivel. 1: Si hay que llamar al de 1r nivel (otro thread del proceso). 2: Si hay que llamar al 2o nivel (otro proceso)
+//0: Si no readyqueue empty. 1: Si hay que llamar al de 1r nivel (otro thread del proceso). 2: Si hay que llamar al 2o nivel (otro proceso)
 int sched_next_decide_level(void){ // isma: Solo se llama a esta funcion en caso de tener que forzar un task_switch (es decir, forzar que el de RUN salga de ahi).
 // alex: Como no se la llamara a partir de una interrupcion de reloj, sabemos que aqui aun queda quantum. Pero igualmente hay que forzar el task_switch 
 	
@@ -214,10 +241,16 @@ int sched_next_decide_level(void){ // isma: Solo se llama a esta funcion en caso
 
 	//si llega aqui: hay alguien en ready
 
-	struct task_struct *t; 
-	struct list_head *e;	
-	/*ME PASEO READY HASTA ENCONTRAR SI HAY ALGUIEN CON UN PID IGUAL AL MIO*/ 
-	if(e == NULL) // nadie de los de ready es otro thread del mismo proceso de quien está en run y va a salir.
+	struct task_struct *t = NULL; 
+	struct list_head *pos; 
+	list_for_each(pos, &readyqueue){
+		 struct task_struct *tmp = list_head_to_task_struct(pos);
+		 if(tmp->PID == current()->PID){
+			t = tmp;
+			break;
+		 } 
+	}
+	if(t == NULL) // nadie de los de ready es otro thread del mismo proceso de quien está en run y va a salir.
 		return 2;
 	else
 		return 1;
@@ -227,7 +260,7 @@ void schedule()
 {
   update_sched_data_rr();
   int level;
-  if (level = needs_sched_rr()) // Si no retorna 0, entra.
+  if ((level = needs_sched_rr())) // Si no retorna 0, entra.
   {
     update_process_state_rr(current(), &readyqueue);
     if(level == 1) sched_next_rr_level1();
@@ -351,7 +384,7 @@ void force_task_switch()
 	case 1:
 		sched_next_rr_level1();
 		break;
-	default:
+	default: // empty ready_queue
 		sched_next_rr(idle_task);
 		break;
   }
