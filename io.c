@@ -15,6 +15,8 @@
 
 Byte x, y = 19;
 
+char buffer[12];
+
 /* Read a byte from 'port' */
 Byte inb(unsigned short port)
 {
@@ -145,4 +147,49 @@ void panic(char *string)
 {
   printk_color("\n[ERROR]: ", 0x04);
   printk_color(string, 0x04);
+}
+
+void breakpoint(char *string)
+{
+  printk_color("\n[BREAKPOINT]: ", 0x03);
+  printk_color(string, 0x03);
+  while (1)
+  {
+  }
+}
+
+void int_to_string(int a, char *b)
+{
+  int i, i1;
+  char c;
+
+  if (a == 0)
+  {
+    b[0] = '0';
+    b[1] = 0;
+    return;
+  }
+
+  i = 0;
+  while (a > 0)
+  {
+    b[i] = (a % 10) + '0';
+    a = a / 10;
+    i++;
+  }
+
+  for (i1 = 0; i1 < i / 2; i1++)
+  {
+    c = b[i1];
+    b[i1] = b[i - i1 - 1];
+    b[i - i1 - 1] = c;
+  }
+  b[i] = 0;
+}
+
+void printvar(int var)
+{
+  int_to_string(var, buffer);
+  printk_color("\n[VARIABLE]: ", 0x03);
+  printk_color(buffer, 0x03);
 }

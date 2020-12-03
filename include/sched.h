@@ -62,6 +62,7 @@ union task_union
 
 struct mutex_t // isma: declaracion de la struct debe estar antes de su uso para declarar el vector de mutexes. Comprobado
 {
+  int pid_owner;
   int tid_owner;
   struct list_head blockedqueue; // isma: centinela de la blockedqueue. Un thread se encolara aqui a traves del campo 'list' de su task_struct
   int initialized;
@@ -73,7 +74,7 @@ extern union task_union protected_tasks[NR_TASKS + 2];
 extern union task_union *task; /* Vector de tasques */
 extern struct task_struct *idle_task;
 
-extern struct list_head threads_processes[NR_TASKS]; // isma: vector de centinelas de las colas de threads de un mismo proceso. Cada proceso tiene su cola (max de NR_TASKS colas, porque hay un maximo de NR_TASKS procesos).
+extern struct list_head threads_processes[NR_TASKS]; // Threads of the same process queue vector // isma: vector de centinelas de las colas de threads de un mismo proceso. Cada proceso tiene su cola (max de NR_TASKS colas, porque hay un maximo de NR_TASKS procesos).
 
 #define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
 
@@ -117,6 +118,6 @@ void sched_next_rr_level2(void);
 int sched_next_decide_level(void);
 
 void init_stats(struct stats *s);
-void init_tls(struct task_struct *t);
+void init_tls(struct tls_t *TLS);
 
 #endif /* __SCHED_H__ */

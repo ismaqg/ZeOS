@@ -17,6 +17,7 @@ extern int errno;
 
 void print(char *s);
 void println(char *s);
+void printvar(int var);
 
 int write(int fd, char *buffer, int size);
 

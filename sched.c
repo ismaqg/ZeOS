@@ -34,6 +34,9 @@ struct list_head freequeue;
 // Ready queue
 struct list_head readyqueue;
 
+// Threads of the same process queue vector
+struct list_head threads_processes[NR_TASKS];
+
 void init_stats(struct stats *s)
 {
   s->user_ticks = 0;
@@ -43,6 +46,15 @@ void init_stats(struct stats *s)
   s->elapsed_total_ticks = get_ticks();
   s->total_trans = 0;
   s->remaining_ticks = get_ticks();
+}
+
+void init_tls(struct tls_t *TLS) // TODO : fix warning
+{
+  for (int i = 0; i < TLS_SIZE; i++)
+  {
+    TLS[i].value = NULL;
+    TLS[i].used = 0;
+  }
 }
 
 /* get_DIR - Returns the Page Directory address for task 't' */
@@ -75,9 +87,10 @@ void cpu_idle(void)
                        :
                        : "memory");
 
+  printk_color("\nExecuting Idle Task...", 0x03);
+
   while (1)
   {
-    ;
   }
 }
 
@@ -321,8 +334,10 @@ void init_idle(void)
   union task_union *uc = (union task_union *)c;
 
   c->PID = 0;
+  c->TID = 0;
 
   c->total_quantum = DEFAULT_QUANTUM_PROCESS;
+  c->quantum_thread = DEFAULT_QUANTUM_THREAD;
 
   init_stats(&c->p_stats);
 
@@ -346,14 +361,35 @@ void init_task1(void)
   union task_union *uc = (union task_union *)c;
 
   c->PID = 1;
+  c->TID = 0;
 
   c->total_quantum = DEFAULT_QUANTUM_PROCESS;
+  c->quantum_thread = DEFAULT_QUANTUM_THREAD;
 
   c->state = ST_RUN;
 
-  remaining_quantum_process = c->total_quantum;
+  c->joined = NULL;
+  c->errno = 0;
+  c->retval = 0;
+  init_tls(&(c->TLS));
+
+  // Get a free threads_process list
+  for (int i = 0; i < NR_TASKS; i++)
+  {
+    if (threads_processes[i].next == NULL)
+    {
+      c->threads_process = &(threads_processes[i]);
+      break;
+    }
+  }
+
+  INIT_LIST_HEAD(c->threads_process);
+  list_add_tail(&(c->list_threads), c->threads_process);
 
   init_stats(&c->p_stats);
+
+  remaining_quantum_process = c->total_quantum;
+  remaining_quantum_thread = c->quantum_thread;
 
   allocate_DIR(c);
 
@@ -408,13 +444,25 @@ void inner_task_switch(union task_union *new)
 
   // Switch current's errno with new's errno
   int *perrno = (int *)0x109000; // Fixed errno address
-  current()->errno = *perrno;
+
+  // Protect against dereferencing perrno as:
+  //  - Idle_task, because is a system process and doesn't have the user address space where errno is.
+  //  - A process that just exited.
+  if (current() != idle_task && current()->PID != -1)
+  {
+    current()->errno = *perrno;
+  }
 
   /* TLB flush. New address space */
   set_cr3(new_DIR);
 
   // Switch current's errno with new's errno
-  *perrno = new->task.errno;
+  // Protect against dereferencing perrno as idle_task, because is asystem
+  // process and doesn't have the user address space where errno is.
+  if (&(new->task) != idle_task)
+  {
+    *perrno = new->task.errno;
+  }
 
   switch_stack(&current()->register_esp, new->task.register_esp);
 }
@@ -432,7 +480,10 @@ void force_task_switch()
   case 1:
     sched_next_rr_level1();
     break;
-  default: // Switch to idle_task as the readyqueue is empty
+  default: // TODO : delete debug
+    // Switch to idle_task as the readyqueue is empty
+    // It should never reach here because of above's update_process_state_rr to readyqueue
+    panic("force_task_switch switched to idle_task with a process in the readyqueue");
     sched_next_rr(idle_task);
     break;
   }

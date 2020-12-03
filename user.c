@@ -57,9 +57,23 @@ main(void)
   /* Next line, tries to move value 0 to CR3 register. This register is a privileged one, and so it will raise an exception */
   /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
 
+  // AS THERE IS NOT ENOUGH SPACE IN THE SCREEN FOR ALL THE TESTS OUTPUTS PLEASE ENABLE THE
+  // TESTS IN BLOCKS OF 4 SO YOU CAN SEE THEM ALL (THIRD PARAMETER OF THE TEST FUNCTION)
+
   /* Write TestCase */
   test("Write success", &write_success, true, true);
   test("Write fails invalid file descriptor", &write_fails_invalid_file_descriptor, true, false);
+
+  /* Fork TestCase */
+  test("Fork success", &fork_success, true, true);
+  test("Fork fails calling thread is not master", &fork_fails_calling_thread_is_not_master, true, false);
+
+  /* Exit TestCase */
+  test("Exit success", &exit_success, true, true);
+  test("Exit fails calling thread is not master", &exit_fails_calling_thread_is_not_master, true, false);
+
+  /* Yield TestCase */
+  test("Yield success", &yield_success, false, false);
 
   /* Pthread_create TestCase */
   test("Pthread_create success", &pthread_create_success, true, false);

@@ -8,6 +8,8 @@
 
 int errno __attribute__((section(".ErrnoSection"))); // Isma: Este cambio viene de la mano con el cambio de user.lds
 
+char buffer[256];
+
 void itoa(int a, char *b)
 {
   int i, i1;
@@ -67,4 +69,10 @@ void println(char *s)
 {
   write(1, "\n", 1);
   write(1, s, strlen(s));
+}
+
+void printvar(int var)
+{
+  itoa(var, buffer);
+  print(buffer);
 }
