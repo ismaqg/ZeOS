@@ -79,6 +79,7 @@ extern struct list_head threads_processes[NR_TASKS]; // isma: vector de centinel
 
 #define INITIAL_ESP KERNEL_ESP(&task[1])
 
+extern struct list_head blockedqueue;
 extern struct list_head freequeue;
 extern struct list_head readyqueue;
 

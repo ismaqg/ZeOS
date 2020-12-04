@@ -11,6 +11,9 @@
 #include <utils.h>
 #include <p_stats.h>
 
+// Address of errno (never changes)
+#define perrno (int *)0x109000
+
 /**
  * Container for the Task array and 2 additional pages (the first and the last one)
  * to protect against out of bound accesses.
@@ -27,8 +30,11 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
 }
 #endif
 
+
 extern struct list_head blocked;
 
+// Blocked queue
+struct list_head blockedqueue;
 // Free task structs
 struct list_head freequeue;
 // Ready queue
@@ -338,6 +344,7 @@ void init_sched()
 {
   init_freequeue();
   INIT_LIST_HEAD(&readyqueue);
+  INIT_LIST_HEAD(&blockedqueue);
 }
 
 struct task_struct *current()
@@ -361,7 +368,9 @@ void inner_task_switch(union task_union *new)
   tss.esp0 = (int)&(new->stack[KERNEL_STACK_SIZE]);
   setMSR(0x175, 0, (unsigned long)&(new->stack[KERNEL_STACK_SIZE]));
 
-  int *perrno = (int*)0x109000; // isma: Address of errno (never changes)
+  //TODO: SACAR DE AQUÍ EL int *perrno = (int*)0x109000. EL PROFE HA HABLADO DE HACER UN DEFINE
+
+  //int *perrno = (int*)0x109000; // isma: Address of errno (never changes)
   current()->errno = *perrno;
 
   /* TLB flush. New address space */
