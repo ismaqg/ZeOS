@@ -208,9 +208,6 @@ void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 void sched_next_rr(struct task_struct *new)
 {
   new->state = ST_RUN;
-  remaining_quantum_process = get_quantum_process(new);
-  remaining_quantum_thread = get_quantum_thread(new);
-
   update_stats(&(current()->p_stats.system_ticks), &(current()->p_stats.elapsed_total_ticks));
   update_stats(&(new->p_stats.ready_ticks), &(new->p_stats.elapsed_total_ticks));
   new->p_stats.total_trans++;
@@ -241,6 +238,7 @@ void sched_next_rr_level1(void)
 
   list_del(&(thread_same_process->list));
 
+  remaining_quantum_thread = get_quantum_thread(thread_same_process);
   sched_next_rr(thread_same_process);
 }
 
@@ -267,6 +265,8 @@ void sched_next_rr_level2(void)
 
   list_del(&(thread_different_process->list));
 
+  remaining_quantum_process = get_quantum_process(thread_different_process);
+  remaining_quantum_thread = get_quantum_thread(thread_different_process);
   sched_next_rr(thread_different_process);
 }
 

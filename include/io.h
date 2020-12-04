@@ -23,7 +23,12 @@ void printk_color(char *string, Byte color);
 void println(char *string);
 void panic(char *string);
 
-void breakpoint(char *string);
 void printvar(int var);
+
+#define breakpoint                        \
+    printk_color("\n[BREAKPOINT]", 0x03); \
+    while (1)                             \
+    {                                     \
+    }
 
 #endif /* __IO_H__ */

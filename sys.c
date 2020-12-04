@@ -253,7 +253,8 @@ void sys_exit()
 
   /* Remove resources of the current process */
 
-  list_del(current()->threads_process);
+  list_del(current()->threads_process); // TODO : REVISAR TODOS LOS list_del -> NO BORRAN LA LISTA SINO EL ELEMENTO EN LA LISTA!!!!
+  // TODO : SI HAGO UN LIST_ADD_TAIL ACORDARSE DE HACER LIST_DEL ANTES!!!
 
   page_table_entry *process_PT = get_PT(current());
 
@@ -314,75 +315,96 @@ int sys_get_stats(int pid, struct stats *st)
 
 int sys_pthread_create(int *TID, void *(*start_routine)(), void *arg)
 {
-  // int result = -1;
+  int result = -1;
 
-  // // Check TID
-  // result = (TID == NULL ? -1 : 0);
-  // if (result < 0)
-  //   return -EFAULT;
+  // Check TID
+  result = (TID == NULL ? -1 : 0);
+  if (result < 0)
+    return -EFAULT;
 
-  // result = (access_ok(VERIFY_WRITE, TID, sizeof(int)) ? 0 : -1);
-  // if (result < 0)
-  //   return -EFAULT;
+  result = (access_ok(VERIFY_WRITE, TID, sizeof(int)) ? 0 : -1);
+  if (result < 0)
+    return -EFAULT;
 
-  // // Check start_routine
-  // result = (start_routine == NULL ? -1 : 0);
-  // if (result < 0)
-  //   return -EFAULT;
+  // Check start_routine
+  result = (start_routine == NULL ? -1 : 0);
+  if (result < 0)
+    return -EFAULT;
 
-  // // Check freequeue
-  // result = (list_empty(&freequeue) ? -1 : 0);
-  // if (result < 0)
-  //   return -EAGAIN;
+  // Check freequeue
+  result = (list_empty(&freequeue) ? -1 : 0);
+  if (result < 0)
+    return -EAGAIN;
 
-  // /* Pick a free task */
-  // struct list_head *free_task = list_first(&freequeue);
-  // struct task_struct *new_task = list_head_to_task_struct(free_task);
-  // list_del(free_task); // Delete task from queue
+  /* Pick a free task */
+  struct list_head *free_task = list_first(&freequeue);
+  struct task_struct *new_task = list_head_to_task_struct(free_task);
+  list_del(free_task); // Delete task from queue
 
-  // /* Initialize new task */
-  // union task_union *new_task_union = (union task_union *)new_task;      // Get the task_union for new_task
-  // union task_union *current_task_union = (union task_union *)current(); // Get the task_union for current task
+  /* Initialize new task */
+  union task_union *new_task_union = (union task_union *)new_task;      // Get the task_union for new_task
+  union task_union *current_task_union = (union task_union *)current(); // Get the task_union for current task
 
-  // /* PLACEHOLDER */
-  // int num_threads_process;
+  int threads_num = 0;
 
-  // list_for_each_safe() {
+  struct list_head *pos;
+  list_for_each(pos, current()->threads_process)
+  {
+    threads_num++;
+  }
 
-  // }
+  /* Inherit system data */
+  copy_data(current_task_union, new_task_union, sizeof(union task_union));
 
-  // /* Inherit system data */
-  // copy_data(current_task_union, new_task_union, sizeof(union task_union));
+  /* Assign new TID */
+  new_task->TID = threads_num;
+  result = copy_to_user(&(new_task->TID), TID, sizeof(int)); // Copy new TID to *TID
+  if (result < 0)
+    return -EFAULT;
 
-  // /* Inherit user data */
-  // page_table_entry *new_page_table = get_PT(new_task); // Get the page table for new_task
+  /* Inherit user data */
 
-  // /* Assign new TID */
+  // Get the page table for new_task (same for current task)
+  page_table_entry *new_page_table = get_PT(new_task);
 
-  // // Copy new TID to *TID
-  // result = copy_to_user(&(new_task->TID), TID, sizeof(int));
-  // if (result < 0)
-  //   return -EFAULT;
+  // Allocate new frame for new stack
+  int new_stack_frame = alloc_frame();
+  if (new_stack_frame < 0)
+    return -ENOMEM;
 
-  // /* PLACEHOLDER */
+  int current_stack_page = PAG_LOG_INIT_DATA + NUM_PAG_DATA + current()->TID;
+  int new_stack_page = PAG_LOG_INIT_DATA + NUM_PAG_DATA + new_task->TID;
 
-  // /* Initialize task_struct structures */
-  // new_task->state = ST_READY;
-  // new_task->p_stats = (const struct stats){0}; // init_stats
+  set_ss_pag(new_page_table, new_stack_page, new_stack_frame);
+  copy_data((int *)(current_stack_page << 12), (int *)(new_stack_page << 12), PAGE_SIZE); // TODO : MIRAR SI SE COPIA EL STACK DEL CURRENT AL NEW THREAD;
 
-  // /* Prepare new_task context for task_switch */
-  // // Get the position of the current EBP in the new_task system stack
-  // int ebp_index = KERNEL_STACK_SIZE - 18; // 5 HW CTX | 11 SW CTX | 1 @pthread_create_handler | 1 previous EBP
-  // // Mock EBP value
-  // new_task_union->stack[ebp_index - 1] = 0;
-  // // Inject start_routine function address
-  // new_task_union->stack[ebp_index] = (unsigned long)start_routine;
+  /* Initialize task_struct structures */
+  new_task->state = ST_READY;
+  init_stats(&(new_task->p_stats));
 
-  // // Point new_task register_esp to the faked EBP
-  // new_task->register_esp = &(new_task_union->stack[ebp_index - 1]);
+  new_task->joined = NULL;
+  new_task->errno = 0;
+  new_task->retval = 0;
+  init_tls(&(new_task->TLS));
 
-  // // Enqueue new process to readyqueue
-  // list_add_tail(&(new_task->list), &readyqueue);
+  list_add_tail(&(new_task->list_threads), new_task->threads_process);
+
+  // LA PILA DEL NUEVO THREAD DEBERIA SER ASI (MENOR A MAYOR):
+  // ARG | @RET ?? <- APUNTAR HW ESP AQUI
+
+  /* TODO : Prepare new_task context for task_switch INJECT THE ARG! INJECTAR EN EIP HW CAMBIAR ESP DEL CONTEXT HARDWARE POR LA BASE DE LA PILA NUEVA */
+  // Get the position of the current EBP in the new_task system stack
+  int ebp_index = KERNEL_STACK_SIZE - 18; // 5 HW CTX | 11 SW CTX | 1 @pthread_create_handler | 1 previous EBP
+  // Mock EBP value
+  new_task_union->stack[ebp_index - 1] = 0;
+  // Inject start_routine function address
+  new_task_union->stack[ebp_index] = (unsigned long)start_routine;
+
+  // Point new_task register_esp to the faked EBP
+  new_task->register_esp = &(new_task_union->stack[ebp_index - 1]);
+
+  // Enqueue new process to readyqueue
+  list_add_tail(&(new_task->list), &readyqueue);
 
   return 0;
 }

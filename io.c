@@ -149,15 +149,6 @@ void panic(char *string)
   printk_color(string, 0x04);
 }
 
-void breakpoint(char *string)
-{
-  printk_color("\n[BREAKPOINT]: ", 0x03);
-  printk_color(string, 0x03);
-  while (1)
-  {
-  }
-}
-
 void int_to_string(int a, char *b)
 {
   int i, i1;
