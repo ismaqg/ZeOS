@@ -20,6 +20,13 @@
 #define LECTURA 0
 #define ESCRIPTURA 1
 
+
+// This is used to calculate the logical page number of the user_stack of the thread whith tid = TID.
+// It is based on that the masterthread (tid = 0) owns the 20th page of user data (NUM_PAG_DATA is 20).
+// remember that we use the user data pages for user global data and user stack(s).
+// also take in account that TIDs are given sequentially (masterthread's TID is 0, the next thread has TID = 1, etc).
+#define THREAD_USER_STACK_PAGE(TID) (PAG_LOG_INIT_DATA + (NUM_PAG_DATA - 1) + TID)
+
 struct mutex_t mutexes[MAX_MUTEXES];
 
 void *get_ebp();
@@ -437,15 +444,120 @@ int sys_pthread_create(int *TID, void *(*wrap_routine)(), void *(*start_routine)
 
 void sys_pthread_exit(int retval)
 {
-  // TODO (isma) : borra esto cuando se implemente el pthread exit
-  panic("A thread terminated but sys_pthread_exit is not implemented");
-  printvar(retval);
-  breakpoint;
+	if(current()->TID == 0) // isma: si es el masterthread, que el pthread_exit se convierta en un exit
+		sys_exit();
+
+
+	struct task_struct* t;
+        if((t = current()->joined) != NULL){ // isma: t es la &task_struct de quien hizo join conmigo. (NULL si nadie)
+		t->state = ST_READY;
+        	list_del(&(t->list)); // isma: unblock the thread who joined me
+		list_add_tail(&(t->list), &readyqueue);
+        }
+
+	struct list_head *pos;
+	int threads_in_the_process_counter = 0;
+	list_for_each(pos, current()->threads_process){ // isma: threads_process is a reference to the sentinel of the threads queue of a certain process
+		struct task_struct *t_aux = list_head_to_task_struct(pos);
+		if(t_aux->state != ST_ZOMBIE)
+			threads_in_the_process_counter++;
+	}
+
+	current()->retval = retval;
+	current()->state = ST_ZOMBIE;
+
+	if(threads_in_the_process_counter == 1){ // isma: solo quedo yo en el process (o los demás que quedan son zombies y nadie les había joineado). 
+		panic("thread_exit: Queda solo 1 thread en el proceso y no es el masterthread"); // isma: Si fuese el master_thread ya habría saltado a sys_exit en el primer if de sys_pthread_exit
+		sys_exit();
+	}
+	else if(threads_in_the_process_counter > 1){
+		switch(sched_next_decide_level()){ 
+			case 2: // isma: the other threads of the same process are blocked but there are other processes in ready. El unico caso donde se me ocurre que puede ocurrir esto sin que sea un desastre absoluto es cuando estan haciendo cosas sobre un mutex junto a OTRO proceso, si no nada les podría desbloquear.
+				sched_next_rr_level2(); 
+				break;
+			case 1: // isma: some other thread(s) of the same process is (are) ready
+				sched_next_rr_level1();
+				break;
+			default: // empty ready_queue
+				panic("pthread_exit: Nos hemos quedado en un sistema en el que todo está bloqueado");
+				sched_next_rr(idle_task);
+				break;
+		  }
+	}
+	else{
+		panic("thread_exit: el contador de threads dice que hay 0 threads en el proceso\n");
+	}
+
+	// isma: Los recursos del thread no serán liberados hasta que otro thread haga join con este o hasta que se haga sys_exit sobre el proceso.
+
 }
 
 int sys_pthread_join(int TID, int *retval)
 {
-  return 38;
+	if(TID == current()->TID)
+		return -EDEADLK; // isma: joining itself
+  
+	if(retval != NULL && !access_ok(VERIFY_WRITE, retval, sizeof(int)) // isma: si retval no es NULL significa que quieren que machaquemos el contenido apuntado por ese puntero, así que miramos que el acceso sea bueno (que no nos hayan pasado, por ejemplo, puntero a zona de código o a zona a la que el usuario no tiene permisos)
+		return -EFAULT;
+		
+
+	struct list_head *pos;
+	struct task_struct *t_thread_to_join_with = NULL;
+	list_for_each(pos, current()->threads_process){ // isma: threads_process is a reference to the sentinel of the threads queue of a certain process
+		struct task_struct *t_aux = list_head_to_task_struct(pos);
+		if(TID == t_aux->TID){
+			t_thread_to_join_with = t_aux;
+			break;
+		}
+	}
+
+	if(t_thread_to_join_with == NULL) // isma: there isn't any thread with that TID in the process
+		return -ESRCH;
+
+	if(current()->joined == t_thread_to_join_with) // isma: if I'm trying to join the same thread that joined me
+		return -EDEADLK;
+ 
+
+	if(t_thread_to_join_with->joined != NULL) // isma: the thread i'm trying to join with was already joined by another thread
+		return -EINVAL;
+
+	if(t_thread_to_join_with->state != ST_ZOMBIE){ // isma: the thread i'm trying to join hasn't finished its execution yet.
+		t_thread_to_join_with->joined = current(); //isma: that thread is officialy joined by me
+		current()->state = ST_BLOCKED;
+		list_add_tail(&(current()->list), &blockedqueue); // isma: we block until that thread finishes its execution
+		switch(sched_next_decide_level()){ 
+			case 2: 
+				//isma: Todos los demás threads del proceso están bloqueados. El unico caso donde se me ocurre que puede ocurrir esto sin que sea un desastre absoluto es cuando estan haciendo cosas sobre un mutex junto a OTRO proceso, si no nada les podría desbloquear.
+				sched_next_rr_level2(); 
+				break;
+			case 1: 
+				sched_next_rr_level1();
+				break;
+			default: 
+				panic("pthread_join: Nos hemos quedado en un sistema en el que todo está bloqueado");
+				sched_next_rr(idle_task);
+				break;
+		}
+	}
+
+	// isma: this point will be reached when the thread_to_join_with finish its execution (exits).
+
+	if(retval != NULL)
+		*retval = t_thread_to_join_with->retval;
+
+	// isma: Liberamos recursos del thread_to_join_with (que ha acabado ejecucion):
+
+	int user_stack_VPN = THREAD_USER_STACK_PAGE(TID);
+	page_table_entry *process_PT = get_PT(t_thread_to_join_with); // isma: dado que son threads del mismo proceso, esta PT es la misma que la PT de current()
+	free_frame(get_frame(process_PT, user_stack_VPN));
+    	del_ss_pag(process_PT, user_stack_VPN);
+
+	t_thread_to_join_with->PID = -1; // isma: no es necesario
+	t_thread_to_join_with->TID = -1; // isma: no es necesario
+	list_del(&(t_thread_to_join_with->list_threads)); // isma: lo quitamos de la cola de threads del proceso
+	list_add_tail(&(t_thread_to_join_with->list), &freequeue); // isma: liberamos su task_struct
+		
+	return 0;
 }
 
 int sys_mutex_init()

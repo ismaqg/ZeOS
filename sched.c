@@ -11,6 +11,7 @@
 #include <utils.h>
 #include <p_stats.h>
 
+
 /**
  * Container for the Task array and 2 additional pages (the first and the last one)
  * to protect against out of bound accesses.
@@ -27,8 +28,11 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
 }
 #endif
 
+
 extern struct list_head blocked;
 
+// Blocked queue
+struct list_head blockedqueue;
 // Free task structs
 struct list_head freequeue;
 // Ready queue
@@ -425,6 +429,7 @@ void init_sched()
 {
   init_freequeue();
   INIT_LIST_HEAD(&readyqueue);
+  INIT_LIST_HEAD(&blockedqueue);
 }
 
 struct task_struct *current()
