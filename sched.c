@@ -107,9 +107,14 @@ int get_quantum_thread(struct task_struct *t)
   return t->quantum_thread;
 }
 
-void set_quantum(struct task_struct *t, int new_quantum)
+void set_quantum_process(struct task_struct *t, int new_quantum)
 {
   t->total_quantum = new_quantum;
+}
+
+void set_quantum_thread(struct task_struct *t, int new_quantum)
+{
+  t->quantum_thread = new_quantum;
 }
 
 struct task_struct *idle_task = NULL;
@@ -233,7 +238,7 @@ void sched_next_rr_level1(void)
     }
   }
 
-  if (thread_same_process == NULL) // TODO : delete debug
+  if (thread_same_process == NULL)
     panic("sched_next_rr_level1 executed with only ready threads of a different process");
 
   list_del(&(thread_same_process->list));
@@ -260,7 +265,7 @@ void sched_next_rr_level2(void)
     }
   }
 
-  if (thread_different_process == NULL) // TODO : delete debug
+  if (thread_different_process == NULL)
     panic("sched_next_rr_level2 executed with only ready threads of the same process");
 
   list_del(&(thread_different_process->list));
@@ -376,7 +381,7 @@ void init_task1(void)
   // Get a free threads_process list
   for (int i = 0; i < NR_TASKS; i++)
   {
-    if (threads_processes[i].next == NULL)
+    if (list_uninitialized(&(threads_processes[i])))
     {
       c->threads_process = &(threads_processes[i]);
       break;
@@ -443,8 +448,6 @@ void inner_task_switch(union task_union *new)
   setMSR(0x175, 0, (unsigned long)&(new->stack[KERNEL_STACK_SIZE]));
 
   // Switch current's errno with new's errno
-  int *perrno = (int *)0x109000; // Fixed errno address
-
   // Protect against dereferencing perrno as:
   //  - Idle_task, because is a system process and doesn't have the user address space where errno is.
   //  - A process that just exited.
@@ -480,7 +483,7 @@ void force_task_switch()
   case 1:
     sched_next_rr_level1();
     break;
-  default: // TODO : delete debug
+  default:
     // Switch to idle_task as the readyqueue is empty
     // It should never reach here because of above's update_process_state_rr to readyqueue
     panic("force_task_switch switched to idle_task with a process in the readyqueue");

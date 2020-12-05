@@ -60,12 +60,6 @@ main(void)
   // AS THERE IS NOT ENOUGH SPACE IN THE SCREEN FOR ALL THE TESTS OUTPUTS PLEASE ENABLE THE
   // TESTS IN BLOCKS OF 4 SO YOU CAN SEE THEM ALL (THIRD PARAMETER OF THE TEST FUNCTION)
 
-  yield();
-
-  while (1)
-  {
-  }
-
   /* Write TestCase */
   test("Write success", &write_success, true, true);
   test("Write fails invalid file descriptor", &write_fails_invalid_file_descriptor, true, false);
@@ -77,9 +71,6 @@ main(void)
   /* Exit TestCase */
   test("Exit success", &exit_success, true, true);
   test("Exit fails calling thread is not master", &exit_fails_calling_thread_is_not_master, true, false);
-
-  /* Yield TestCase */
-  test("Yield success", &yield_success, false, false);
 
   /* Pthread_create TestCase */
   test("Pthread_create success", &pthread_create_success, true, false);

@@ -144,7 +144,7 @@ int sys_fork(void)
   // Get a free threads_process list
   for (int i = 0; i < NR_TASKS; i++)
   {
-    if (threads_processes[i].next == NULL)
+    if (list_uninitialized(&(threads_processes[i])))
     {
       uchild->task.threads_process = &(threads_processes[i]);
       break;
@@ -239,7 +239,7 @@ void sys_exit()
       {
         mutexes[i].pid_owner = -1;
         mutexes[i].tid_owner = -1;
-        list_del(&(mutexes[i].blockedqueue));
+        DESTROY_LIST_HEAD(&(mutexes[i].blockedqueue));
         mutexes[i].initialized = 0;
       }
     }
@@ -253,8 +253,7 @@ void sys_exit()
 
   /* Remove resources of the current process */
 
-  list_del(current()->threads_process); // TODO : REVISAR TODOS LOS list_del -> NO BORRAN LA LISTA SINO EL ELEMENTO EN LA LISTA!!!!
-  // TODO : SI HAGO UN LIST_ADD_TAIL ACORDARSE DE HACER LIST_DEL ANTES!!!
+  DESTROY_LIST_HEAD(current()->threads_process);
 
   page_table_entry *process_PT = get_PT(current());
 
@@ -271,7 +270,7 @@ void sys_exit()
   case 2:
     sched_next_rr_level2();
     break;
-  case 1: // TODO : delete debug
+  case 1:
     panic("sys_exit switched to a thread of the same process");
     sched_next_rr_level1();
     break;
@@ -313,7 +312,7 @@ int sys_get_stats(int pid, struct stats *st)
   return -ESRCH; /*ESRCH */
 }
 
-int sys_pthread_create(int *TID, void *(*start_routine)(), void *arg)
+int sys_pthread_create(int *TID, void *(*wrap_routine)(), void *(*start_routine)(), void *arg)
 {
   int result = -1;
 
@@ -323,6 +322,11 @@ int sys_pthread_create(int *TID, void *(*start_routine)(), void *arg)
     return -EFAULT;
 
   result = (access_ok(VERIFY_WRITE, TID, sizeof(int)) ? 0 : -1);
+  if (result < 0)
+    return -EFAULT;
+
+  // Check wrap_routine
+  result = (wrap_routine == NULL ? -1 : 0);
   if (result < 0)
     return -EFAULT;
 
@@ -360,23 +364,31 @@ int sys_pthread_create(int *TID, void *(*start_routine)(), void *arg)
   new_task->TID = threads_num;
   result = copy_to_user(&(new_task->TID), TID, sizeof(int)); // Copy new TID to *TID
   if (result < 0)
+  {
+    // Deallocate task_struct
+    new_task->PID = -1;
+    new_task->TID = -1;
+    list_add_tail(&(new_task->list), &freequeue);
     return -EFAULT;
+  }
 
   /* Inherit user data */
 
   // Get the page table for new_task (same for current task)
   page_table_entry *new_page_table = get_PT(new_task);
 
-  // Allocate new frame for new stack
+  // Allocate new frame for new user stack
   int new_stack_frame = alloc_frame();
   if (new_stack_frame < 0)
+  {
+    // Deallocate task_struct
+    new_task->PID = -1;
+    new_task->TID = -1;
+    list_add_tail(&(new_task->list), &freequeue);
     return -ENOMEM;
+  }
 
-  int current_stack_page = PAG_LOG_INIT_DATA + NUM_PAG_DATA + current()->TID;
-  int new_stack_page = PAG_LOG_INIT_DATA + NUM_PAG_DATA + new_task->TID;
-
-  set_ss_pag(new_page_table, new_stack_page, new_stack_frame);
-  copy_data((int *)(current_stack_page << 12), (int *)(new_stack_page << 12), PAGE_SIZE); // TODO : MIRAR SI SE COPIA EL STACK DEL CURRENT AL NEW THREAD;
+  set_ss_pag(new_page_table, THREAD_USER_STACK_PAGE(new_task->TID), new_stack_frame);
 
   /* Initialize task_struct structures */
   new_task->state = ST_READY;
@@ -389,19 +401,33 @@ int sys_pthread_create(int *TID, void *(*start_routine)(), void *arg)
 
   list_add_tail(&(new_task->list_threads), new_task->threads_process);
 
-  // LA PILA DEL NUEVO THREAD DEBERIA SER ASI (MENOR A MAYOR):
-  // ARG | @RET ?? <- APUNTAR HW ESP AQUI
+  /* Prepare new_task user stack */
 
-  /* TODO : Prepare new_task context for task_switch INJECT THE ARG! INJECTAR EN EIP HW CAMBIAR ESP DEL CONTEXT HARDWARE POR LA BASE DE LA PILA NUEVA */
+  unsigned long *new_user_stack = (THREAD_USER_STACK_PAGE(new_task->TID) << 12);
+
+  new_user_stack[USER_STACK_SIZE - 3] = 0;                            // fake @ret
+  new_user_stack[USER_STACK_SIZE - 2] = (unsigned long)start_routine; // void *(*start_routine)()
+  new_user_stack[USER_STACK_SIZE - 1] = (unsigned long)arg;           // void *arg
+
+  /* Prepare new_task context for task_switch */
+
   // Get the position of the current EBP in the new_task system stack
   int ebp_index = KERNEL_STACK_SIZE - 18; // 5 HW CTX | 11 SW CTX | 1 @pthread_create_handler | 1 previous EBP
-  // Mock EBP value
-  new_task_union->stack[ebp_index - 1] = 0;
-  // Inject start_routine function address
-  new_task_union->stack[ebp_index] = (unsigned long)start_routine;
 
-  // Point new_task register_esp to the faked EBP
-  new_task->register_esp = &(new_task_union->stack[ebp_index - 1]);
+  // Get the position of the current HW EIP in the new_task system stack
+  int hw_eip_index = KERNEL_STACK_SIZE - 5; // 5 HW CTX | 11 SW CTX | 1 @pthread_create_handler | 1 previous EBP
+
+  // Get the position of the current HW ESP in the new_task system stack
+  int hw_esp_index = KERNEL_STACK_SIZE - 2; // 5 HW CTX | 11 SW CTX | 1 @pthread_create_handler | 1 previous EBP
+
+  // Inject @wrap_routine in the new_task HW EIP
+  new_task_union->stack[hw_eip_index] = (unsigned long)wrap_routine;
+
+  // Inject new_user_stack @top in the new_task HW ESP
+  new_task_union->stack[hw_esp_index] = &(new_user_stack[USER_STACK_SIZE - 3]); // void *arg | void *(*start_routine)() | fake @ret
+
+  // Point new_task register_esp to the current EBP
+  new_task->register_esp = &(new_task_union->stack[ebp_index]);
 
   // Enqueue new process to readyqueue
   list_add_tail(&(new_task->list), &readyqueue);
@@ -411,6 +437,10 @@ int sys_pthread_create(int *TID, void *(*start_routine)(), void *arg)
 
 void sys_pthread_exit(int retval)
 {
+  // TODO (isma) : borra esto cuando se implemente el pthread exit
+  panic("A thread terminated but sys_pthread_exit is not implemented");
+  printvar(retval);
+  breakpoint;
 }
 
 int sys_pthread_join(int TID, int *retval)

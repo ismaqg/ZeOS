@@ -51,6 +51,8 @@ struct list_head
  */
 void INIT_LIST_HEAD(struct list_head *head);
 
+void DESTROY_LIST_HEAD(struct list_head *head);
+
 /**
  * list_add - add a new entry
  * @new: new entry to be added
@@ -92,6 +94,8 @@ int list_is_last(const struct list_head *list,
  * @head: the list to test.
  */
 int list_empty(const struct list_head *head);
+
+int list_uninitialized(const struct list_head *head);
 
 /**
  * list_entry - get the struct for this entry

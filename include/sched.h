@@ -12,6 +12,7 @@
 
 #define NR_TASKS 10
 #define KERNEL_STACK_SIZE 1024
+#define USER_STACK_SIZE (PAGE_SIZE / sizeof(int))
 
 #define DEFAULT_QUANTUM_PROCESS 30
 #define DEFAULT_QUANTUM_THREAD 10
@@ -19,6 +20,8 @@
 #define MAX_MUTEXES 20
 
 #define TLS_SIZE 64
+
+#define perrno (int *)0x109000 // Fixed errno address
 
 enum state_t
 {
@@ -79,6 +82,8 @@ extern struct list_head threads_processes[NR_TASKS]; // Threads of the same proc
 #define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
 
 #define INITIAL_ESP KERNEL_ESP(&task[1])
+
+#define THREAD_USER_STACK_PAGE(TID) (PAG_LOG_INIT_DATA + NUM_PAG_DATA - 1 + TID)
 
 extern struct list_head freequeue;
 extern struct list_head readyqueue;
