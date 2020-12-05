@@ -1,12 +1,13 @@
 #include <libc.h>
 
-void otra_funcion(){
+void* otra_funcion(){
 	println("soy el thread 2 y voy a hacer exit");
 	pthread_exit(NULL);
 	println("ESTO NUNCA DEBERÍA ESCRIBIRSE");
+	return NULL;
 }
 
-void funcion_nuevo_thread(void* argumento){
+void* funcion_nuevo_thread(void* argumento){
 	printvar((int)argumento);
 	/*while(1){
 		println("soy el thread 1");
@@ -19,6 +20,7 @@ void funcion_nuevo_thread(void* argumento){
 	println("soy el thread 1 y voy a hacer exit");
 	pthread_exit(NULL);
 	println("ESTO NUNCA DEBERÍA ESCRIBIRSE");
+	return NULL;
 }
 
 

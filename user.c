@@ -81,7 +81,7 @@ main(void)
   /* Pthread_join TestCase */
 //  test("Pthread_join success", &pthread_join_success, true, false);
 //  test("Pthread_join EDEADLK", &pthread_join_EDEADLK, true, false);
-//  test("Pthread_join EINVAL", &pthread_join_EINVAL, true, false);
+  test("Pthread_join EINVAL", &pthread_join_EINVAL, true, false);
 //  test("Pthread_join ESRCH", &pthread_join_ESRCH, true, false);
 //  test("Pthread_join EFAULT", &pthread_join_EFAULT, true, false);
 

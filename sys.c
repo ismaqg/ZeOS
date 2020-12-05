@@ -517,8 +517,7 @@ int sys_pthread_join(int TID, int *retval)
 	if(current()->joined == t_thread_to_join_with) // isma: if I'm trying to join the same thread that joined me
 		return -EDEADLK;
  
-
-	if(t_thread_to_join_with->joined != NULL) // isma: the thread i'm trying to join with was already joined by another thread
+	if(t_thread_to_join_with->joined != NULL) // isma: the thread i'm trying to join with was already joined by another thread	
 		return -EINVAL;
 
 	if(t_thread_to_join_with->state != ST_ZOMBIE){ // isma: the thread i'm trying to join hasn't finished its execution yet.

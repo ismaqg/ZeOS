@@ -48,30 +48,31 @@ void* join_con_masterthread(){
 
 void* joinearme_con_quien_me_pasan_de_argumento(void* tid){
 	int e = pthread_join((int)tid, NULL); 
-	if (e == -1) perror();
+	if (e == -1) println("test superado, no se queda joineado");
 	return 0;
 }
 
 int pthread_join_EDEADLK(void){
 	int e = pthread_join(0, NULL); //JOIN CONMIGO MISMO
 	if (e == -1) perror();
-
+	println("");
 
 	int TID;
 	pthread_create(&TID, join_con_masterthread, (void*) 1);
 	int e2 = pthread_join(TID, NULL); //join con un thread y ese otro thread se joinea conmigo
 	if (e2 == -1) perror();
+	println("");
 
 	return true;
 }
 
 
-int pthread_join_EINVAL(void){
+int pthread_join_EINVAL(void){ 
 	int TID1, TID2;
 	pthread_create(&TID1, while1, (void*) 1);
 	pthread_create(&TID2, joinearme_con_quien_me_pasan_de_argumento, (void*)TID1);
 	int e = pthread_join(TID1, NULL);
-	if (e == -1) perror(); //hay 2 threads intentando joinerse con el thread TID1.
+	if (e == -1) println("test superado, no se queda joineado");
 	return true;
 }
 
@@ -80,13 +81,15 @@ int pthread_join_ESRCH(void){
 	pthread_create(&TID, while1, (void*) 1);
 	int e = pthread_join(123, NULL); //nadie tiene el TID 123
 	if (e == -1) perror();
+	println("");
 	return true;
 }
 
-int pthread_join_EFAULT(void){
+int pthread_join_EFAULT(void){ 
 	int TID;
 	pthread_create(&TID, while1, (void*) 1);
 	int e = pthread_join(TID, (int*)&hola); //el puntero que estamos pasando es un puntero a una zona de codigo! 
 	if (e == -1) perror();
+	println("");
 	return true;
 }

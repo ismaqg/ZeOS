@@ -21,6 +21,10 @@ int pthread_exit_success(void);
 
 /* Pthread_join TestCase */
 int pthread_join_success(void);
+int pthread_join_EDEADLK(void);
+int pthread_join_EINVAL(void);
+int pthread_join_ESRCH(void);
+int pthread_join_EFAULT(void);
 
 /* Mutex_init TestCase */
 int mutex_init_success(void);
