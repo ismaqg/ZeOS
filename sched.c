@@ -34,6 +34,10 @@ struct list_head freequeue;
 // Ready queue
 struct list_head readyqueue;
 
+// Sentinels vector of thread queues of the same process
+// I.E.: Each element will be a list head of the threads queue of a certain process
+struct list_head threads_processes[NR_TASKS];
+
 void init_stats(struct stats *s)
 {
   s->user_ticks = 0;
@@ -43,6 +47,15 @@ void init_stats(struct stats *s)
   s->elapsed_total_ticks = get_ticks();
   s->total_trans = 0;
   s->remaining_ticks = get_ticks();
+}
+
+void init_tls(struct tls_t *TLS) // TODO : fix warning
+{
+  for (int i = 0; i < TLS_SIZE; i++)
+  {
+    TLS[i].value = NULL;
+    TLS[i].used = 0;
+  }
 }
 
 /* get_DIR - Returns the Page Directory address for task 't' */
@@ -75,12 +88,12 @@ void cpu_idle(void)
                        :
                        : "memory");
 
+  printk_color("\nExecuting Idle Task...", 0x03);
+
   while (1)
   {
-    ;
   }
 }
-
 
 int remaining_quantum_process = 0;
 int remaining_quantum_thread = 0;
@@ -95,63 +108,87 @@ int get_quantum_thread(struct task_struct *t)
   return t->quantum_thread;
 }
 
-void set_quantum(struct task_struct *t, int new_quantum)
+void set_quantum_process(struct task_struct *t, int new_quantum)
 {
   t->total_quantum = new_quantum;
+}
+
+void set_quantum_thread(struct task_struct *t, int new_quantum)
+{
+  t->quantum_thread = new_quantum;
 }
 
 struct task_struct *idle_task = NULL;
 
 void update_sched_data_rr(void)
 {
-  if(--remaining_quantum_process < 0) remaining_quantum_process = 0; // isma: Evitar que siga decrementando infinitamente hasta underflow
-  if(--remaining_quantum_thread < 0) remaining_quantum_thread = 0;
+  if (--remaining_quantum_process < 0)
+    remaining_quantum_process = 0; // Prevent underflow
+  if (--remaining_quantum_thread < 0)
+    remaining_quantum_thread = 0; // Prevent underflow
 }
 
-//0: switch not needed. 1: se necesita planificador de 1r nivel (thread mismo proceso). 2: planificador 2o nivel (thread distinto proceso)
+// Returns
+// 0 : Switch not needed
+// 1 : Needs switch 1st level (thread same process)
+// 2 : Needs switch 2nd level (thread different process)
 int needs_sched_rr(void) // isma: Solo se llamara en tick de reloj
 {
-   if(list_empty(&readyqueue))
-	return 0;
+  if (list_empty(&readyqueue))
+    return 0;
 
-   // si llegamos a este punto: ready NO vacía.
+  // There is a thread in the readyqueue
 
-   if (current() == idle_task) 
-	return 2;
+  // If executing idle_task, switch instantly to the other ready process
+  if (current() == idle_task)
+    return 2;
 
-   //si llegamos a este punto: ready NO vacia y en RUN NO idle_task
+  // The current process didn't finish its time in cpu
+  if (remaining_quantum_process > 0 && remaining_quantum_thread > 0)
+    return 0;
 
-   if(remaining_quantum_process > 0 && remaining_quantum_thread > 0)
-	return 0;
+  // Try to find a switcheable thread as we don't have process quantum
+  // or thread quantum left and readyqueue is not empty
 
-   //si llegamos aqui: ready NO vacia, en RUN NO idle_task y algún quantum está finalizado
+  struct task_struct *thread_same_process = NULL;      // Ready thread of the same process candidate
+  struct task_struct *thread_different_process = NULL; // Ready thread of a different process candidate
 
-   struct list_head *pos; 
-   struct task_struct *t_thread_same_process = NULL;
-   struct task_struct *t_thread_different_process = NULL;
-   list_for_each(pos, &readyqueue){
-	 struct task_struct *t = list_head_to_task_struct(pos);
-	 if(t_thread_same_process == NULL && t->PID == current()->PID) t_thread_same_process = t;
-	 else if(t_thread_different_process == NULL && t->PID != current()->PID) t_thread_different_process = t;
-   }
+  struct list_head *pos;
+  list_for_each(pos, &readyqueue)
+  {
+    struct task_struct *tmp = list_head_to_task_struct(pos);
+    if (thread_same_process == NULL && tmp->PID == current()->PID)
+      thread_same_process = tmp;
+    else if (thread_different_process == NULL && tmp->PID != current()->PID)
+      thread_different_process = tmp;
 
-   if(remaining_quantum_thread <= 0 && remaining_quantum_process > 0){
-	if(t_thread_same_process != NULL)
-		return 1; 
-	return 0;
-   }
+    if (thread_same_process != NULL && thread_different_process != NULL)
+      break;
+  }
 
-   //si llegamos aqui: ready NO vacia, en RUN NO idle_task y quantum proceso finalizado (<=0) SEGURO (y el de thread no se sabe)
+  // The current thread finished its quantum but not the current process
+  if (remaining_quantum_thread <= 0 && remaining_quantum_process > 0)
+  {
+    if (thread_same_process != NULL)
+      return 1; // Switch to the ready thread_same_process
+    return 0;   // As there isn't any ready thread_same_process
+  }             // continue process quantum with the current thread
 
-   if(t_thread_different_process != NULL) return 2; 
-	
-   //si llegamos aqui, como ready NO vacia, es que sé al 100% que en ready hay otros threads de mi mismo proceso (pero no de otro)
+  // isma: Si llegamos aqui: ready NO vacia, en RUN NO idle_task y quantum proceso finalizado (<=0) SEGURO (y el de thread no se sabe)
 
-   if(remaining_quantum_thread <= 0) //isma: Ahora sí que nos interesa saber si aparte de quantumprocess <= 0 tambien teniamos thread<=0
-	return 1;
-   return 0;	
-   
-   
+  // The current process has no quantum left
+
+  // If there is a ready thread_different_process switch to it
+  if (thread_different_process != NULL)
+    return 2;
+
+  // isma: Si llegamos aqui, como ready NO vacia, es que sé al 100% que en ready hay otros threads de mi mismo proceso (pero no de otro)
+
+  // As there isn't any ready thread_different_process
+  // switch to thread_same_process if current thread quantum is done
+  if (remaining_quantum_thread <= 0) // isma: Ahora sí que nos interesa saber si aparte de quantumprocess <= 0 tambien teniamos thread<=0
+    return 1;
+  return 0;
 }
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
@@ -173,98 +210,125 @@ void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
     t->state = ST_RUN;
 }
 
-// Simlemente pone t en RUN
-void sched_next_rr(struct task_struct *t) 
+// Puts new in RUN
+void sched_next_rr(struct task_struct *new)
 {
-	t->state = ST_RUN;
-  	remaining_quantum_process = get_quantum_process(t);
-	remaining_quantum_thread = get_quantum_thread(t);
+  new->state = ST_RUN;
+  update_stats(&(current()->p_stats.system_ticks), &(current()->p_stats.elapsed_total_ticks));
+  update_stats(&(new->p_stats.ready_ticks), &(new->p_stats.elapsed_total_ticks));
+  new->p_stats.total_trans++;
 
-  	update_stats(&(current()->p_stats.system_ticks), &(current()->p_stats.elapsed_total_ticks));
-  	update_stats(&(t->p_stats.ready_ticks), &(t->p_stats.elapsed_total_ticks));
-  	t->p_stats.total_trans++;
-
-  	task_switch((union task_union *)t);
+  task_switch((union task_union *)new);
 }
 
-//planificador de 1r nivel (thread mismo proceso)
-void sched_next_rr_level1(void) // A esta funcion solo se la llamara cuando tengamos seguro al 100% que en ready quedan threads DEL MISMO proceso
+// Scheduler 1st level (thread same process)
+// isma: Solo entrara en esta funcion si readyqueue NO vacia
+// isma: A esta funcion solo se la llamara cuando tengamos seguro al 100% que en ready quedan threads DEL MISMO proceso
+void sched_next_rr_level1(void)
 {
-	//solo entrara en esta funcion si readyqueue NO vacia
+  struct task_struct *thread_same_process = NULL; // Ready thread of the same process
 
-	struct task_struct *t = NULL; // isma: t es el nuevo que entra a run	
-	struct list_head *pos; 
-	list_for_each(pos, &readyqueue){
-		 struct task_struct *tmp = list_head_to_task_struct(pos);
-		 if(tmp->PID == current()->PID){
-			t = tmp;
-			break;
-		 } 
-	}
+  struct list_head *pos;
+  list_for_each(pos, &readyqueue)
+  {
+    struct task_struct *tmp = list_head_to_task_struct(pos);
+    if (tmp->PID == current()->PID)
+    {
+      thread_same_process = tmp;
+      break;
+    }
+  }
 
+  if (thread_same_process == NULL)
+    panic("sched_next_rr_level1 executed with only ready threads of a different process");
 
-	if(t == NULL) println("ERROR: se ha ejecutado sched_level2 con solo threads de otros procesos en ready");
-        list_del(&(t->list));
+  list_del(&(thread_same_process->list));
 
-        sched_next_rr(t);
-
+  remaining_quantum_thread = get_quantum_thread(thread_same_process);
+  sched_next_rr(thread_same_process);
 }
 
-//planificador 2o nivel (thread distinto proceso)
-void sched_next_rr_level2(void) // A esta funcion solo se la llamara cuando tengamos seguro al 100% que en ready hay otro proceso DISTINTO
+// Scheduler 2nd level (thread different process)
+// isma: Solo entrara en esta funcion si readyqueue NO vacia
+// isma: A esta funcion solo se la llamara cuando tengamos seguro al 100% que en ready hay otro proceso DISTINTO
+void sched_next_rr_level2(void)
 {
-	//solo entrara en esta funcion si readyqueue NO vacia
+  struct task_struct *thread_different_process = NULL; // Ready thread of a different process
 
-	struct task_struct *t = NULL; // isma: t es el nuevo que entra a run	
-	struct list_head *pos; 
-	list_for_each(pos, &readyqueue){
-		 struct task_struct *tmp = list_head_to_task_struct(pos);
-		 if(tmp->PID != current()->PID){
-			t = tmp;
-			break;
-		 } 
-	}
+  struct list_head *pos;
+  list_for_each(pos, &readyqueue)
+  {
+    struct task_struct *tmp = list_head_to_task_struct(pos);
+    if (tmp->PID != current()->PID)
+    {
+      thread_different_process = tmp;
+      break;
+    }
+  }
 
+  if (thread_different_process == NULL)
+    panic("sched_next_rr_level2 executed with only ready threads of the same process");
 
-	if(t == NULL) println("ERROR: se ha ejecutado sched_level2 con solo threads del mismo procesos en ready");
-        list_del(&(t->list));
+  list_del(&(thread_different_process->list));
 
-        sched_next_rr(t);
+  remaining_quantum_process = get_quantum_process(thread_different_process);
+  remaining_quantum_thread = get_quantum_thread(thread_different_process);
+  sched_next_rr(thread_different_process);
 }
 
-//0: Si no readyqueue empty. 1: Si hay que llamar al de 1r nivel (otro thread del proceso). 2: Si hay que llamar al 2o nivel (otro proceso)
-int sched_next_decide_level(void){ // isma: Solo se llama a esta funcion en caso de tener que forzar un task_switch (es decir, forzar que el de RUN salga de ahi).
-// alex: Como no se la llamara a partir de una interrupcion de reloj, sabemos que aqui aun queda quantum. Pero igualmente hay que forzar el task_switch 
-	
-	if(list_empty(&readyqueue))
-		return 0;
+// Returns
+// 0 : Switch to idle_task
+// 1 : Needs switch 1st level (thread same process)
+// 2 : Needs switch 2nd level (thread different process)
+// isma: Solo se llama a esta funcion en caso de tener que forzar un task_switch (es decir, forzar que el de RUN salga de ahi).
+// alex: Como no se la llamara a partir de una interrupcion de reloj, sabemos que aqui aun queda quantum. Pero igualmente hay que forzar el task_switch
+int sched_next_decide_level(void)
+{
+  if (list_empty(&readyqueue))
+    return 0;
 
-	//si llega aqui: hay alguien en ready
+  // There is a thread in the readyqueue
 
-	struct task_struct *t = NULL; 
-	struct list_head *pos; 
-	list_for_each(pos, &readyqueue){
-		 struct task_struct *tmp = list_head_to_task_struct(pos);
-		 if(tmp->PID == current()->PID){
-			t = tmp;
-			break;
-		 } 
-	}
-	if(t == NULL) // nadie de los de ready es otro thread del mismo proceso de quien está en run y va a salir.
-		return 2;
-	else
-		return 1;
+  // Try to find a switcheable thread of the same process
+  // as we know both quantums still have ticks left
+
+  struct task_struct *thread_same_process = NULL; // Ready thread of the same process candidate
+
+  struct list_head *pos;
+  list_for_each(pos, &readyqueue)
+  {
+    struct task_struct *tmp = list_head_to_task_struct(pos);
+    if (tmp->PID == current()->PID)
+    {
+      thread_same_process = tmp;
+      break;
+    }
+  }
+
+  // Switch to the ready thread_same_process
+  if (thread_same_process != NULL)
+    return 1;
+
+  // As there isn't any ready thread_same_process
+  // switch to thread_different_process
+  return 2;
 }
 
 void schedule()
 {
   update_sched_data_rr();
+
   int level;
-  if ((level = needs_sched_rr())) // Si no retorna 0, entra.
+
+  // Switch if needed (not 0)
+  if ((level = needs_sched_rr()))
   {
     update_process_state_rr(current(), &readyqueue);
-    if(level == 1) sched_next_rr_level1();
-    else if(level == 2) sched_next_rr_level2();
+
+    if (level == 1)
+      sched_next_rr_level1();
+    else if (level == 2)
+      sched_next_rr_level2();
   }
 }
 
@@ -276,8 +340,10 @@ void init_idle(void)
   union task_union *uc = (union task_union *)c;
 
   c->PID = 0;
+  c->TID = 0;
 
   c->total_quantum = DEFAULT_QUANTUM_PROCESS;
+  c->quantum_thread = DEFAULT_QUANTUM_THREAD;
 
   init_stats(&c->p_stats);
 
@@ -301,14 +367,35 @@ void init_task1(void)
   union task_union *uc = (union task_union *)c;
 
   c->PID = 1;
+  c->TID = 0;
 
   c->total_quantum = DEFAULT_QUANTUM_PROCESS;
+  c->quantum_thread = DEFAULT_QUANTUM_THREAD;
 
   c->state = ST_RUN;
 
-  remaining_quantum_process = c->total_quantum;
+  c->joined = NULL;
+  c->errno = 0;
+  c->retval = 0;
+  init_tls(c->TLS);
+
+  // Get a free threads_process list
+  for (int i = 0; i < NR_TASKS; i++)
+  {
+    if (list_uninitialized(&(threads_processes[i])))
+    {
+      c->threads_process = &(threads_processes[i]);
+      break;
+    }
+  }
+
+  INIT_LIST_HEAD(c->threads_process);
+  list_add_tail(&(c->list_threads), c->threads_process);
 
   init_stats(&c->p_stats);
+
+  remaining_quantum_process = c->total_quantum;
+  remaining_quantum_thread = c->quantum_thread;
 
   allocate_DIR(c);
 
@@ -361,13 +448,25 @@ void inner_task_switch(union task_union *new)
   tss.esp0 = (int)&(new->stack[KERNEL_STACK_SIZE]);
   setMSR(0x175, 0, (unsigned long)&(new->stack[KERNEL_STACK_SIZE]));
 
-  int *perrno = (int*)0x109000; // isma: Address of errno (never changes)
-  current()->errno = *perrno;
+  // Switch current's errno with new's errno
+  // Protect against dereferencing perrno as:
+  //  - Idle_task, because is a system process and doesn't have the user address space where errno is.
+  //  - A process that just exited.
+  if (current() != idle_task && current()->PID != -1)
+  {
+    current()->errno = *perrno;
+  }
 
   /* TLB flush. New address space */
   set_cr3(new_DIR);
 
-  *perrno = new->task.errno;
+  // Switch current's errno with new's errno
+  // Protect against dereferencing perrno as idle_task, because is asystem
+  // process and doesn't have the user address space where errno is.
+  if (&(new->task) != idle_task)
+  {
+    *perrno = new->task.errno;
+  }
 
   switch_stack(&current()->register_esp, new->task.register_esp);
 }
@@ -377,16 +476,19 @@ void force_task_switch()
 {
   update_process_state_rr(current(), &readyqueue);
 
-  switch(sched_next_decide_level()){ 
-	case 2:
-		sched_next_rr_level2();
-		break;
-	case 1:
-		sched_next_rr_level1();
-		break;
-	default: // empty ready_queue
-		sched_next_rr(idle_task);
-		break;
+  switch (sched_next_decide_level())
+  {
+  case 2:
+    sched_next_rr_level2();
+    break;
+  case 1:
+    sched_next_rr_level1();
+    break;
+  default:
+    // Switch to idle_task as the readyqueue is empty
+    // It should never reach here because of above's update_process_state_rr to readyqueue
+    panic("force_task_switch switched to idle_task with a process in the readyqueue");
+    sched_next_rr(idle_task);
+    break;
   }
-
 }

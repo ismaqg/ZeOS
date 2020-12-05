@@ -105,11 +105,14 @@ ENTRY(pthread_create)
 	pushl %ebp
 	movl %esp, %ebp
 	pushl %ebx  // Save EBX, ESI and EDI if modified
+	pushl %esi
 	movl $36, %eax
-	movl 8(%ebp), %ebx  // &TID
-	movl 12(%ebp), %ecx // &start_routine
-	movl 16(%ebp), %edx // arg
+	movl 8(%ebp), %ebx // &TID
+	leal thread_start_routine, %ecx // inject &wrap_routine
+	movl 12(%ebp), %edx // &start_routine
+	movl 16(%ebp), %esi // arg
 	call syscall_sysenter
+	popl %esi
 	popl %ebx
 	test %eax, %eax
 	js nok	// if (eax < 0) jump to nok
@@ -209,7 +212,6 @@ ENTRY(pthread_key_create)
 	popl %ebp
 	ret
 
-
 /* int pthread_key_delete(int key) */
 ENTRY(pthread_key_delete)
 	pushl %ebp
@@ -253,5 +255,29 @@ ENTRY(pthread_setspecific)
 	popl %ebp
 	ret
 
+/* void thread_start_routine(void *(*start_routine)(), void *arg) */
+ENTRY(thread_start_routine)
+	pushl %ebp
+	movl %esp, %ebp
 
+	pushl %ebx
+	pushl %esi
+	pushl %edi
 
+	movl 8(%ebp), %ebx // &start_routine
+	movl 12(%ebp), %esi // arg
+
+	pushl %esi
+	call %ebx // start_routine(arg)
+	popl %esi
+
+	// Terminate current thread calling pthread_exit
+	pushl %eax
+	call pthread_exit // pthread_exit(%eax)
+	popl %eax
+
+	popl %edi
+	popl %esi
+	popl %ebx
+	popl %ebp
+	ret

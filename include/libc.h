@@ -17,6 +17,13 @@ extern int errno;
 
 void print(char *s);
 void println(char *s);
+void printvar(int var);
+
+#define breakpoint           \
+    println("[BREAKPOINT]"); \
+    while (1)                \
+    {                        \
+    }
 
 int write(int fd, char *buffer, int size);
 

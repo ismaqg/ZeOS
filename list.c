@@ -96,3 +96,22 @@ int list_empty(const struct list_head *head)
 {
 	return head->next == head;
 }
+
+int list_uninitialized(const struct list_head *head)
+{
+	return (head->next == (void *)0) && (head->prev == (void *)0);
+}
+
+void DESTROY_LIST_HEAD(struct list_head *list)
+{
+	struct list_head *pos, *aux;
+
+	list_for_each_safe(pos, aux, list)
+	{
+		pos->next = (void *)0;
+		pos->prev = (void *)0;
+	}
+
+	list->next = (void *)0;
+	list->prev = (void *)0;
+}
