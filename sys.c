@@ -454,9 +454,6 @@ void sys_pthread_exit(int retval)
         	list_del(&(t->list)); // isma: unblock the thread who joined me
 		list_add_tail(&(t->list), &readyqueue);
         }
-	
-	current()->retval = retval;
-	current()->state = ST_ZOMBIE;
 
 	struct list_head *pos;
 	int threads_in_the_process_counter = 0;
@@ -466,7 +463,11 @@ void sys_pthread_exit(int retval)
 			threads_in_the_process_counter++;
 	}
 
-	if(threads_in_the_process_counter == 1){ // isma: solo quedo yo en el process (o los demás que quedan son zombies y nadie les había joineado)
+	current()->retval = retval;
+	current()->state = ST_ZOMBIE;
+
+	if(threads_in_the_process_counter == 1){ // isma: solo quedo yo en el process (o los demás que quedan son zombies y nadie les había joineado). 
+		panic("thread_exit: Queda solo 1 thread en el proceso y no es el masterthread"); // isma: Si fuese el master_thread ya habría saltado a sys_exit en el primer if de sys_pthread_exit
 		sys_exit();
 	}
 	else if(threads_in_the_process_counter > 1){
@@ -478,13 +479,13 @@ void sys_pthread_exit(int retval)
 				sched_next_rr_level1();
 				break;
 			default: // empty ready_queue
-				panic("ERROR pthread_exit: Nos hemos quedado en un sistema en el que todo está bloqueado");
+				panic("pthread_exit: Nos hemos quedado en un sistema en el que todo está bloqueado");
 				sched_next_rr(idle_task);
 				break;
 		  }
 	}
 	else{
-		panic("error thread_exit: el contador de threads dice que hay 0 threads en el proceso\n");
+		panic("thread_exit: el contador de threads dice que hay 0 threads en el proceso\n");
 	}
 
 	// isma: Los recursos del thread no serán liberados hasta que otro thread haga join con este o hasta que se haga sys_exit sobre el proceso.
@@ -496,6 +497,10 @@ int sys_pthread_join(int TID, int *retval)
 	if(TID == current()->TID)
 		return -EDEADLK; // isma: joining itself
   
+	if(retval != NULL && !access_ok(VERIFY_WRITE, retval, sizeof(int)) // isma: si retval no es NULL significa que quieren que machaquemos el contenido apuntado por ese puntero, así que miramos que el acceso sea bueno (que no nos hayan pasado, por ejemplo, puntero a zona de código o a zona a la que el usuario no tiene permisos)
+		return -EFAULT;
+		
+
 	struct list_head *pos;
 	struct task_struct *t_thread_to_join_with = NULL;
 	list_for_each(pos, current()->threads_process){ // isma: threads_process is a reference to the sentinel of the threads queue of a certain process
@@ -506,7 +511,7 @@ int sys_pthread_join(int TID, int *retval)
 		}
 	}
 
-	if(t_thread_to_join_with == NULL)
+	if(t_thread_to_join_with == NULL) // isma: there isn't any thread with that TID in the process
 		return -ESRCH;
 
 	if(current()->joined == t_thread_to_join_with) // isma: if I'm trying to join the same thread that joined me
@@ -516,7 +521,7 @@ int sys_pthread_join(int TID, int *retval)
 	if(t_thread_to_join_with->joined != NULL) // isma: the thread i'm trying to join with was already joined by another thread
 		return -EINVAL;
 
-	if(t_thread_to_join_with->state != ST_ZOMBIE){ // isma: the thread i'm trying trying to join hasn't finished its execution yet.
+	if(t_thread_to_join_with->state != ST_ZOMBIE){ // isma: the thread i'm trying to join hasn't finished its execution yet.
 		t_thread_to_join_with->joined = current(); //isma: that thread is officialy joined by me
 		current()->state = ST_BLOCKED;
 		list_add_tail(&(current()->list), &blockedqueue); // isma: we block until that thread finishes its execution
@@ -529,7 +534,7 @@ int sys_pthread_join(int TID, int *retval)
 				sched_next_rr_level1();
 				break;
 			default: 
-				panic("ERROR pthread_join: Nos hemos quedado en un sistema en el que todo está bloqueado");
+				panic("pthread_join: Nos hemos quedado en un sistema en el que todo está bloqueado");
 				sched_next_rr(idle_task);
 				break;
 		}
@@ -547,9 +552,10 @@ int sys_pthread_join(int TID, int *retval)
 	free_frame(get_frame(process_PT, user_stack_VPN));
     	del_ss_pag(process_PT, user_stack_VPN);
 
+	t_thread_to_join_with->PID = -1; // isma: no es necesario
 	t_thread_to_join_with->TID = -1; // isma: no es necesario
 	list_del(&(t_thread_to_join_with->list_threads)); // isma: lo quitamos de la cola de threads del proceso
-	list_add_tail(&(t_thread_to_join_with->list), &freequeue);
+	list_add_tail(&(t_thread_to_join_with->list), &freequeue); // isma: liberamos su task_struct
 		
 	return 0;
 }
