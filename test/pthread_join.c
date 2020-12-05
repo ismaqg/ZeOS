@@ -86,7 +86,7 @@ int pthread_join_ESRCH(void){
 int pthread_join_EFAULT(void){
 	int TID;
 	pthread_create(&TID, while1, (void*) 1);
-	int e = pthread_join(TID, &hola); //el puntero que estamos pasando es un puntero a una zona de codigo! 
+	int e = pthread_join(TID, (int*)&hola); //el puntero que estamos pasando es un puntero a una zona de codigo! 
 	if (e == -1) perror();
 	return true;
 }
