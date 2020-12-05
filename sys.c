@@ -497,7 +497,7 @@ int sys_pthread_join(int TID, int *retval)
 	if(TID == current()->TID)
 		return -EDEADLK; // isma: joining itself
   
-	if(retval != NULL && !access_ok(VERIFY_WRITE, retval, sizeof(int)) // isma: si retval no es NULL significa que quieren que machaquemos el contenido apuntado por ese puntero, así que miramos que el acceso sea bueno (que no nos hayan pasado, por ejemplo, puntero a zona de código o a zona a la que el usuario no tiene permisos)
+	if(retval != NULL && !access_ok(VERIFY_WRITE, retval, sizeof(int))) // isma: si retval no es NULL significa que quieren que machaquemos el contenido apuntado por ese puntero, así que miramos que el acceso sea bueno (que no nos hayan pasado, por ejemplo, puntero a zona de código o a zona a la que el usuario no tiene permisos)
 		return -EFAULT;
 		
 
