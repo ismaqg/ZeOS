@@ -34,7 +34,8 @@ struct list_head freequeue;
 // Ready queue
 struct list_head readyqueue;
 
-// Threads of the same process queue vector
+// Sentinels vector of thread queues of the same process
+// I.E.: Each element will be a list head of the threads queue of a certain process
 struct list_head threads_processes[NR_TASKS];
 
 void init_stats(struct stats *s)
@@ -376,7 +377,7 @@ void init_task1(void)
   c->joined = NULL;
   c->errno = 0;
   c->retval = 0;
-  init_tls(&(c->TLS));
+  init_tls(c->TLS);
 
   // Get a free threads_process list
   for (int i = 0; i < NR_TASKS; i++)

@@ -139,7 +139,7 @@ int sys_fork(void)
   uchild->task.joined = NULL;
   uchild->task.errno = 0;
   uchild->task.retval = 0;
-  init_tls(&(uchild->task.TLS));
+  init_tls(uchild->task.TLS);
 
   // Get a free threads_process list
   for (int i = 0; i < NR_TASKS; i++)
@@ -397,15 +397,15 @@ int sys_pthread_create(int *TID, void *(*wrap_routine)(), void *(*start_routine)
   new_task->joined = NULL;
   new_task->errno = 0;
   new_task->retval = 0;
-  init_tls(&(new_task->TLS));
+  init_tls(new_task->TLS);
 
   list_add_tail(&(new_task->list_threads), new_task->threads_process);
 
   /* Prepare new_task user stack */
 
-  unsigned long *new_user_stack = (THREAD_USER_STACK_PAGE(new_task->TID) << 12);
+  unsigned long *new_user_stack = (unsigned long *)(THREAD_USER_STACK_PAGE(new_task->TID) << 12);
 
-  new_user_stack[USER_STACK_SIZE - 3] = 0;                            // fake @ret
+  new_user_stack[USER_STACK_SIZE - 3] = 0;                            // fake @ret (the new thread will never need this because it will terminate before)
   new_user_stack[USER_STACK_SIZE - 2] = (unsigned long)start_routine; // void *(*start_routine)()
   new_user_stack[USER_STACK_SIZE - 1] = (unsigned long)arg;           // void *arg
 
@@ -424,10 +424,10 @@ int sys_pthread_create(int *TID, void *(*wrap_routine)(), void *(*start_routine)
   new_task_union->stack[hw_eip_index] = (unsigned long)wrap_routine;
 
   // Inject new_user_stack @top in the new_task HW ESP
-  new_task_union->stack[hw_esp_index] = &(new_user_stack[USER_STACK_SIZE - 3]); // void *arg | void *(*start_routine)() | fake @ret
+  new_task_union->stack[hw_esp_index] = (unsigned long)&(new_user_stack[USER_STACK_SIZE - 3]); // void *arg | void *(*start_routine)() | fake @ret
 
   // Point new_task register_esp to the current EBP
-  new_task->register_esp = &(new_task_union->stack[ebp_index]);
+  new_task->register_esp = (int)&(new_task_union->stack[ebp_index]);
 
   // Enqueue new process to readyqueue
   list_add_tail(&(new_task->list), &readyqueue);

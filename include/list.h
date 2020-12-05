@@ -51,6 +51,7 @@ struct list_head
  */
 void INIT_LIST_HEAD(struct list_head *head);
 
+// DESTROY_LIST_HEAD - Iteratively uninitializes a list
 void DESTROY_LIST_HEAD(struct list_head *head);
 
 /**
@@ -95,6 +96,7 @@ int list_is_last(const struct list_head *list,
  */
 int list_empty(const struct list_head *head);
 
+// list_uninitialized - tests whether a list is pointing to NULL
 int list_uninitialized(const struct list_head *head);
 
 /**
@@ -120,6 +122,8 @@ int list_uninitialized(const struct list_head *head);
  * @n:          another &struct list_head to use as temporary storage
  * @head:       the head for your list.
  */
+// list_for_each_safe allows you to remove the current element of the list
+// without segmentation fault caused by element->next being NULL
 #define list_for_each_safe(pos, n, head)                       \
         for (pos = (head)->next, n = pos->next; pos != (head); \
              pos = n, n = pos->next)

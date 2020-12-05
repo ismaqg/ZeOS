@@ -77,7 +77,7 @@ extern union task_union protected_tasks[NR_TASKS + 2];
 extern union task_union *task; /* Vector de tasques */
 extern struct task_struct *idle_task;
 
-extern struct list_head threads_processes[NR_TASKS]; // Threads of the same process queue vector // isma: vector de centinelas de las colas de threads de un mismo proceso. Cada proceso tiene su cola (max de NR_TASKS colas, porque hay un maximo de NR_TASKS procesos).
+extern struct list_head threads_processes[NR_TASKS]; // Sentinels vector of thread queues of the same process // isma: vector de centinelas de las colas de threads de un mismo proceso. Cada proceso tiene su cola (max de NR_TASKS colas, porque hay un maximo de NR_TASKS procesos).
 
 #define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
 

@@ -10,7 +10,7 @@ int sys_write_console(char *buffer, int size)
   int i;
 
   for (i = 0; i < size; i++)
-    printc_scroll(buffer[i], 0x02);
+    printc_scroll(buffer[i], 0x02); // Write buffer to the screen with green color
 
   return size;
 }
