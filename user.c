@@ -76,10 +76,14 @@ main(void)
 //  test("Pthread_create success", &pthread_create_success, true, false);
 
   /* Pthread_exit TestCase */
-//  test("Pthread_exit success", &pthread_exit_success, true, false);
+  test("Pthread_exit success", &pthread_exit_success, true, false);
 
   /* Pthread_join TestCase */
-  test("Pthread_join success", &pthread_join_success, true, false);
+//  test("Pthread_join success", &pthread_join_success, true, false);
+  test("Pthread_join EDEADLK", &pthread_join_EDEADLK, true, false);
+//  test("Pthread_join EINVAL", &pthread_join_EINVAL, true, false);
+//  test("Pthread_join ESRCH", &pthread_join_ESRCH, true, false);
+//  test("Pthread_join EFAULT", &pthread_join_EFAULT, true, false);
 
   /* Mutex_init TestCase */
 //  test("Mutex_init success", &mutex_init_success, true, false);
