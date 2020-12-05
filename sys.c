@@ -451,8 +451,8 @@ void sys_pthread_exit(int retval)
 	struct task_struct* t;
         if((t = current()->joined) != NULL){ // isma: t es la &task_struct de quien hizo join conmigo. (NULL si nadie)
 		t->state = ST_READY;
-        	list_del(&(t->joined->list)); // isma: unblock the thread who joined me
-		list_add_tail(&(t->joined->list), &readyqueue);
+        	list_del(&(t->list)); // isma: unblock the thread who joined me
+		list_add_tail(&(t->list), &readyqueue);
         }
 	
 	current()->retval = retval;
