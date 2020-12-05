@@ -20,9 +20,12 @@
 #define LECTURA 0
 #define ESCRIPTURA 1
 
-// calculate the logical page number of the user_stack of the thread.
-// it is based on that the masterthread (tid = 0) owns the 20th page of user data and that the TIDs are given sequentially.
-#define calc_VPN_user_stack(TID) (PAG_LOG_INIT_DATA + 19 + TID)
+
+// This is used to calculate the logical page number of the user_stack of the thread whith tid = TID.
+// It is based on that the masterthread (tid = 0) owns the 20th page of user data (NUM_PAG_DATA is 20).
+// remember that we use the user data pages for user global data and user stack(s).
+// also take in account that TIDs are given sequentially (masterthread's TID is 0, the next thread has TID = 1, etc).
+#define calc_VPN_user_stack(TID) (PAG_LOG_INIT_DATA + (NUM_PAG_DATA-1) + TID)
 
 struct mutex_t mutexes[MAX_MUTEXES];
 
