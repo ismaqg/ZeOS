@@ -582,12 +582,36 @@ int sys_mutex_unlock(int mutex_id)
 
 int sys_pthread_key_create()
 {
-  return 43;
+
+	//TODO: ISMA A ALEX (compañero): Esto inicializa una posicion de la tls de un thread. Otra opcion sería que esto inicializase una posición de la tls de todos los threads del proceso.
+	// Depende de si en el setspecific vas a querer mirar que la posición tenga used=true a la hora de poner el valor o vas a poner el valor del tirón y ya.
+	// Porque en caso de que quieras hacer esa comprobación, con el código que hay aquí habríamos tenido que llamar a key_create para cada uno de los threads que quiere guardar una cosa.
+	// Yo lo dejaría así porque si inicializas una posicion que pueden usar todos los threads porque quieres ahorrarte n llamadas a key_create deberás andar pasándole esa key al thread de alguna
+	// forma como usando variables globales y tal.
+
+	for(int i = 0; i < TLS_SIZE; i++){
+		if(!(current()->TLS[i].used)){
+			current()->TLS[i].used = true;
+			return i;
+		}
+	}
+	return -EAGAIN; // Isma: no queda ninguna posición en la TLS del thread libre
+
+	/* CODIGO EQUIVALENTE, pero a mí me gusta más el primero y si el compilador es listo lo traducirá de igual manera:
+	tls_t* p = current()->TLS;
+	for(int i = 0; i < TLS_SIZE; i++){
+		if(!((p+i)->used)){
+			(p+i)->used = true;
+			return i;
+		}
+	}
+	return -EAGAIN; // Isma: no queda ninguna posición en la TLS del thread libre
+	*/
 }
 
 int sys_pthread_key_delete(int key)
 {
-  return 44;
+  	if()
 }
 
 void *sys_pthread_getspecific(int key)
