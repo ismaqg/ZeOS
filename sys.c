@@ -240,6 +240,9 @@ void sys_exit()
     struct task_struct *tmp = list_head_to_task_struct(pos);
 
     // TODO (isma) : mover esto a una funcion ya que la sys_mutex_destroy deberia hacer algo parecido no?
+    // TODO (alex) : teniendo en cuenta que pid_owner y tid_owner se refiere a QUIEN TIENE EL LOCK COGIDO, esto no deberia destruir el mutex sino desbloquearlo.
+		//Y no te haría falta iterar sobre el vector de mutex para cada thread del proceso sino una única vez: Si el que tiene el lock es CUALQUIER THREAD 
+		//del proceso que estoy matando, desbloquea el mutex. Y en funcion de si añadimos el campo pid_initializer pues ahí sí DESTRUYELO.
     for (int i = 0; i < MAX_MUTEXES; i++)
     {
       if (mutexes[i].pid_owner == tmp->PID && mutexes[i].tid_owner == tmp->TID)
@@ -564,7 +567,8 @@ int sys_mutex_init()
   	for(int i = 0; i < MAX_MUTEXES; i++){
 		if(!mutexes[i].initialized){
 			mutexes[i].initialized = true;
-			INIT_LIST_HEAD(mutexes[i].blockedqueue);
+			INIT_LIST_HEAD(&(mutexes[i].blockedqueue));
+			//TODO: Si hemos añadido el campo pid_initializer pues aqui darle valor
 			return i; // isma: returns the mutex identifier that has been initialized.
 		}
 	}
@@ -574,7 +578,25 @@ int sys_mutex_init()
 int sys_mutex_destroy(int mutex_id)
 {
   //TODO: Alex en el sys_exit() había puesto una cosa que quizá coincide con lo que hay en esta función
-  return 40;
+  
+    if(mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[i].initialized)
+	return -EINVAL;
+
+    if(mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner >= 0) // Trying to unitialize a mutex that is being locked (used) in this moment.
+	return -EBUSY;
+
+    if((mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner < 0) || (mutexes[mutex_id].pid_owner <= 0 && mutexes[mutex_id].tid_owner > 0))
+	panic("sys_mutex_destroy");
+
+    //TODO: Igual hace falta poner que un mutex solo lo puede desinicializar alguien del mismo proceso que lo inicializo y para eso haria falta añadir el campo pid_initializer al mutex_t
+
+    mutex[mutex_id].pid_owner = -1;
+    mutex[mutex_id].pid_owner = -1;
+    DESTROY_LIST_HEAD(&(mutexes[mutex_id].blockedqueue));
+    mutexes[mutex_id].initialized = 0;
+    //TODO: Si hemos añadido el campo pid_initializer pues aqui ponerle a -1
+
+
 }
 
 int sys_mutex_lock(int mutex_id)
