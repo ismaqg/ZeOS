@@ -20,6 +20,9 @@
 #define LECTURA 0
 #define ESCRIPTURA 1
 
+#define true 1
+#define false 0
+
 
 // This is used to calculate the logical page number of the user_stack of the thread whith tid = TID.
 // It is based on that the masterthread (tid = 0) owns the 20th page of user data (NUM_PAG_DATA is 20).
@@ -584,10 +587,12 @@ int sys_pthread_key_create()
 {
 
 	//TODO: ISMA A ALEX (compañero): Esto inicializa una posicion de la tls de un thread. Otra opcion sería que esto inicializase una posición de la tls de todos los threads del proceso.
-	// Depende de si en el setspecific vas a querer mirar que la posición tenga used=true a la hora de poner el valor o vas a poner el valor del tirón y ya.
-	// Porque en caso de que quieras hacer esa comprobación, con el código que hay aquí habríamos tenido que llamar a key_create para cada uno de los threads que quiere guardar una cosa.
-	// Yo lo dejaría así porque si inicializas una posicion que pueden usar todos los threads porque quieres ahorrarte n llamadas a key_create deberás andar pasándole esa key al thread de alguna
-	// forma como usando variables globales y tal.
+	// En el setspecific/getspecific no sé si vas a querer mirar que la posición tenga used=true a la hora de poner el valor o vas a poner/coger el valor del tirón y ya. QUÉ HARAS????
+	// POSIBLE SITUACIÓN DONDE TE INTERESA QUE ESTA FUNCIÓN INICIALICE PARA TODOS LOS THREADS DEL TIRÓN: Estas cogiendo una key que vas a usar para guardar en esa posición un valor rand(),
+	// y todos los threads de tu proceso van a guardar ese valor rand() en tls[key].
+	// POSIBLE SITUACIÓN DONDE TE INTERESA QUE ESTA FUNCIÓN SOLO INICIALICE PARA EL THREAD QUE LLAMA: Cuando como programador no necesitas la situación anterior o te la suda que si quieres
+	// generar una situación como esa pues tengas que tener mucho cuidado con el código que escribes porque un thread tendrá rand() guardado en TLS[2], el otro en TLS[5], etc.
+
 
 	for(int i = 0; i < TLS_SIZE; i++){
 		if(!(current()->TLS[i].used)){
@@ -611,7 +616,13 @@ int sys_pthread_key_create()
 
 int sys_pthread_key_delete(int key)
 {
-  	if()
+	//TODO: ISMA A ALEX(compañero): si TLS[i] NO estaba usado retornamos error o sudamos?
+	//he hecho que sudemos ya que que esta función lo que hace es ponerlo a "no usado", así que será como "has hecho trabajo redundante pero no te retorno error".
+
+  	if(key < 0 || key >= TLS_SIZE)
+		return -EINVAL;
+	current()->TLS[key].used = false;
+	return 0;
 }
 
 void *sys_pthread_getspecific(int key)
