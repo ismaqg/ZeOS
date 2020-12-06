@@ -561,11 +561,19 @@ int sys_pthread_join(int TID, int *retval)
 
 int sys_mutex_init()
 {
-  return 39;
+  	for(int i = 0; i < MAX_MUTEXES; i++){
+		if(!mutexes[i].initialized){
+			mutexes[i].initialized = true;
+			INIT_LIST_HEAD(mutexes[i].blockedqueue);
+			return i; // isma: returns the mutex identifier that has been initialized.
+		}
+	}
+	return -EAGAIN; //isma: all the mutexes already initialized
 }
 
 int sys_mutex_destroy(int mutex_id)
 {
+  //TODO: Alex en el sys_exit() había puesto una cosa que quizá coincide con lo que hay en esta función
   return 40;
 }
 
