@@ -20,6 +20,8 @@
 #define LECTURA 0
 #define ESCRIPTURA 1
 
+#define true 1
+#define false 0
 
 // This is used to calculate the logical page number of the user_stack of the thread whith tid = TID.
 // It is based on that the masterthread (tid = 0) owns the 20th page of user data (NUM_PAG_DATA is 20).
@@ -579,7 +581,7 @@ int sys_mutex_destroy(int mutex_id)
 {
   //TODO: Alex en el sys_exit() había puesto una cosa que quizá coincide con lo que hay en esta función
   
-    if(mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[i].initialized)
+    if(mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
 	return -EINVAL;
 
     if(mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner >= 0) // Trying to unitialize a mutex that is being locked (used) in this moment.
@@ -590,13 +592,13 @@ int sys_mutex_destroy(int mutex_id)
 
     //TODO: Igual hace falta poner que un mutex solo lo puede desinicializar alguien del mismo proceso que lo inicializo y para eso haria falta añadir el campo pid_initializer al mutex_t
 
-    mutex[mutex_id].pid_owner = -1;
-    mutex[mutex_id].pid_owner = -1;
+    mutexes[mutex_id].pid_owner = -1;
+    mutexes[mutex_id].pid_owner = -1;
     DESTROY_LIST_HEAD(&(mutexes[mutex_id].blockedqueue));
     mutexes[mutex_id].initialized = 0;
     //TODO: Si hemos añadido el campo pid_initializer pues aqui ponerle a -1
 
-
+    return 0;
 }
 
 int sys_mutex_lock(int mutex_id)
