@@ -4,7 +4,7 @@ int pthread_setspecific_getspecific_success(void)
 {
     int key = pthread_key_create();
     int e = pthread_setspecific(key, (void*)123);
-    if(e < 0) return 0;
+    if(e < 0) return false;
     void* ret = pthread_getspecific(key);
 
     return (ret == (void*)123);
@@ -15,14 +15,14 @@ int pthread_setspecific_getspecific_EINVAL(void){
 	int e;
 
 	e = pthread_setspecific(-1, (void*)123);
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 	e = pthread_setspecific(70, (void*)123);
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 
 	e = (int)pthread_getspecific(-1);
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 	e = (int)pthread_getspecific(70);
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 
 
 
@@ -30,12 +30,12 @@ int pthread_setspecific_getspecific_EINVAL(void){
 	pthread_key_delete(key);
 
 	e = pthread_setspecific(key, (void*)123);
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 
 	e = (int)pthread_getspecific(key);
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 
 
-	return 1; //todo ha funcionado como esperábamos si llegamos aqui
+	return true; //todo ha funcionado como esperábamos si llegamos aqui
 
 }

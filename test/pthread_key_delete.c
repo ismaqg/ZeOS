@@ -20,18 +20,18 @@ int pthread_key_delete_EINVAL(void){
 	e = pthread_key_delete(key);
 	if(e < 0){
 		println("ha fallado un key delete que deberia haber funcionado");
-		return 0;
+		return false;
 	}
 	e = pthread_key_delete(key); //este debería fallar porque usa posicion ya desinicializada
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 
 	//si llegamos aquí es que el anterior delete ha retornado EINVAL, lo que queríamos.
 
 	e = pthread_key_delete(-6);
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 
 	e = pthread_key_delete(70);
-	if(e != -1 || errno != EINVAL) return 0;
+	if(e != -1 || errno != EINVAL) return false;
 
-	return 1; //todo ha funcionado como esperábamos si llegamos aqui
+	return true; //todo ha funcionado como esperábamos si llegamos aqui
 }
