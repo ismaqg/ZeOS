@@ -570,17 +570,15 @@ int sys_mutex_init()
 		if(!mutexes[i].initialized){
 			mutexes[i].initialized = true;
 			INIT_LIST_HEAD(&(mutexes[i].blockedqueue));
-			//TODO: Si hemos añadido el campo pid_initializer pues aqui darle valor
-			return i; // isma: returns the mutex identifier that has been initialized.
+			mutexes[i].pid_initializer = current()->PID;
+			return i; // returns the mutex identifier that has been initialized.
 		}
 	}
-	return -EAGAIN; //isma: all the mutexes already initialized
+	return -EAGAIN; // all the mutexes already initialized
 }
 
 int sys_mutex_destroy(int mutex_id)
-{
-  //TODO: Alex en el sys_exit() había puesto una cosa que quizá coincide con lo que hay en esta función
-  
+{ 
     if(mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
 	return -EINVAL;
 
@@ -590,13 +588,14 @@ int sys_mutex_destroy(int mutex_id)
     if((mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner < 0) || (mutexes[mutex_id].pid_owner <= 0 && mutexes[mutex_id].tid_owner > 0))
 	panic("sys_mutex_destroy");
 
-    //TODO: Igual hace falta poner que un mutex solo lo puede desinicializar alguien del mismo proceso que lo inicializo y para eso haria falta añadir el campo pid_initializer al mutex_t
+    if(mutexes[mutex_id].pid_initializer != current()->PID)
+	return -EPERM;
 
     mutexes[mutex_id].pid_owner = -1;
     mutexes[mutex_id].pid_owner = -1;
     DESTROY_LIST_HEAD(&(mutexes[mutex_id].blockedqueue));
-    mutexes[mutex_id].initialized = 0;
-    //TODO: Si hemos añadido el campo pid_initializer pues aqui ponerle a -1
+    mutexes[mutex_id].initialized = false;
+    mutexes[mutex_id].pid_initializer = -1;
 
     return 0;
 }

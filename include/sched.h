@@ -69,6 +69,7 @@ struct mutex_t // isma: declaracion de la struct debe estar antes de su uso para
   int tid_owner;
   struct list_head blockedqueue; // isma: centinela de la blockedqueue. Un thread se encolara aqui a traves del campo 'list' de su task_struct
   int initialized;
+  int pid_initializer; // isma: quién inicializó el mutex
 };
 
 extern struct mutex_t mutexes[MAX_MUTEXES];
