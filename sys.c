@@ -128,7 +128,9 @@ int sys_fork(void)
   {
     set_ss_pag(process_PT, PAG_LOG_INIT_CODE + pag, get_frame(parent_PT, PAG_LOG_INIT_CODE + pag));
   }
+
   /* Copy parent's DATA to child. We will use the range [TOTAL_PAGES-NUM_PAG_DATA..TOTAL_PAGES-1] as temp logical pages to map to */
+  // isma: si usásemos el rango [PAG_LOG_INIT_DATA+NUM_PAG_DATA..PAG_LOG_INIT_DATA+NUM_PAG_DATA+NUM_PAG_DATA] y el proceso padre tuviese varios threads, estariamos usando las user_stacks de esos otros threads, lo que estaría mal!
   for (pag = 0; pag < NUM_PAG_DATA; pag++)
   {
     /* Map one child page to parent's address space. */
