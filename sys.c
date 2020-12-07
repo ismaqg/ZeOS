@@ -556,8 +556,8 @@ int sys_pthread_join(int TID, int *retval)
 	free_frame(get_frame(process_PT, user_stack_VPN));
     	del_ss_pag(process_PT, user_stack_VPN);
 
-	t_thread_to_join_with->PID = -1; // isma: no es necesario
-	t_thread_to_join_with->TID = -1; // isma: no es necesario
+	t_thread_to_join_with->PID = -1; // not needed. Just for consistency with other functions
+	t_thread_to_join_with->TID = -1; // not needed. Just for consistency with other functions
 	list_del(&(t_thread_to_join_with->list_threads)); // isma: lo quitamos de la cola de threads del proceso
 	list_add_tail(&(t_thread_to_join_with->list), &freequeue); // isma: liberamos su task_struct
 		
