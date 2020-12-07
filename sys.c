@@ -131,13 +131,13 @@ int sys_fork(void)
   {
     set_ss_pag(process_PT, PAG_LOG_INIT_CODE + pag, get_frame(parent_PT, PAG_LOG_INIT_CODE + pag));
   }
-  /* Copy parent's DATA to child. We will use TOTAL_PAGES-1 as a temp logical page to map to */
-  for (pag = NUM_PAG_KERNEL + NUM_PAG_CODE; pag < NUM_PAG_KERNEL + NUM_PAG_CODE + NUM_PAG_DATA; pag++)
+  /* Copy parent's DATA to child. We will use the range [TOTAL_PAGES-NUM_PAG_DATA..TOTAL_PAGES-1] as temp logical pages to map to */
+  for (pag = 0; pag < NUM_PAG_DATA; pag++)
   {
     /* Map one child page to parent's address space. */
-    set_ss_pag(parent_PT, pag + NUM_PAG_DATA, get_frame(process_PT, pag));
-    copy_data((void *)(pag << 12), (void *)((pag + NUM_PAG_DATA) << 12), PAGE_SIZE);
-    del_ss_pag(parent_PT, pag + NUM_PAG_DATA);
+    set_ss_pag(parent_PT, TOTAL_PAGES - NUM_PAG_DATA + pag, get_frame(process_PT, PAG_LOG_INIT_DATA + pag));
+    copy_data((void *)((PAG_LOG_INIT_DATA+pag) << 12), (void *)((TOTAL_PAGES - NUM_PAG_DATA + pag) << 12), PAGE_SIZE);
+    del_ss_pag(parent_PT, TOTAL_PAGES - NUM_PAG_DATA + pag);
   }
   /* Deny access to the child's memory space */
   set_cr3(get_DIR(current()));
