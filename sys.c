@@ -585,42 +585,23 @@ int sys_mutex_unlock(int mutex_id)
 
 int sys_pthread_key_create()
 {
-
-	//TODO: ISMA A ALEX (compañero): Esto inicializa una posicion de la tls de un thread. Otra opcion sería que esto inicializase una posición de la tls de todos los threads del proceso.
-	// En el setspecific/getspecific no sé si vas a querer mirar que la posición tenga used=true a la hora de poner el valor o vas a poner/coger el valor del tirón y ya. QUÉ HARAS????
-	// POSIBLE SITUACIÓN DONDE TE INTERESA QUE ESTA FUNCIÓN INICIALICE PARA TODOS LOS THREADS DEL TIRÓN: Estas cogiendo una key que vas a usar para guardar en esa posición un valor rand(),
-	// y todos los threads de tu proceso van a guardar ese valor rand() en tls[key].
-	// POSIBLE SITUACIÓN DONDE TE INTERESA QUE ESTA FUNCIÓN SOLO INICIALICE PARA EL THREAD QUE LLAMA: Cuando como programador no necesitas la situación anterior o te la suda que si quieres
-	// generar una situación como esa pues tengas que tener mucho cuidado con el código que escribes porque un thread tendrá rand() guardado en TLS[2], el otro en TLS[5], etc.
-
-
+	/* initializing a TLS position for the calling thread */
 	for(int i = 0; i < TLS_SIZE; i++){
 		if(!(current()->TLS[i].used)){
 			current()->TLS[i].used = true;
-			return i;
+			return i; // returns the initialized position
 		}
 	}
-	return -EAGAIN; // Isma: no queda ninguna posición en la TLS del thread libre
-
-	/* CODIGO EQUIVALENTE, pero a mí me gusta más el primero y si el compilador es listo lo traducirá de igual manera:
-	tls_t* p = current()->TLS;
-	for(int i = 0; i < TLS_SIZE; i++){
-		if(!((p+i)->used)){
-			(p+i)->used = true;
-			return i;
-		}
-	}
-	return -EAGAIN; // Isma: no queda ninguna posición en la TLS del thread libre
-	*/
+	// there isn't any free position in calling thread's TLS
+	return -EAGAIN; 
 }
 
 int sys_pthread_key_delete(int key)
 {
-	//TODO: ISMA A ALEX(compañero): si TLS[i] NO estaba usado retornamos error o sudamos?
-	//he hecho que sudemos ya que que esta función lo que hace es ponerlo a "no usado", así que será como "has hecho trabajo redundante pero no te retorno error".
-
-  	if(key < 0 || key >= TLS_SIZE)
+	/* if the position is unitialized or doesn't exit: EINVAL */
+  	if(key < 0 || key >= TLS_SIZE || !current()->TLS[key].used)
 		return -EINVAL;
+	/* else, we unitialize that position */
 	current()->TLS[key].used = false;
 	return 0;
 }
