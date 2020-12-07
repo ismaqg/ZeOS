@@ -35,16 +35,15 @@ int mutex_lock_success(void);
 int mutex_unlock_success(void);
 
 /* Pthread_key_create TestCase */
-int pthread_key_create_success(void);
+int pthread_key_create_test(void);
 
 /* Pthread_key_delete TestCase */
 int pthread_key_delete_success(void);
+int pthread_key_delete_EINVAL(void);
 
-/* Pthread_getspecific TestCase */
-int pthread_getspecific_success(void);
-
-/* Pthread_setspecific TestCase */
-int pthread_setspecific_success(void);
+/* Pthread_getspecific and setspecific TestCase */
+int pthread_setspecific_getspecific_success(void);
+int pthread_setspecific_getspecific_EINVAL(void);
 
 /* Errno TestCase */
 int errno_success(void);

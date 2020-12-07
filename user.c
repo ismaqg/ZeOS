@@ -94,16 +94,14 @@ main(void)
   test("Mutex_unlock success", &mutex_unlock_success, true, false);
 
   /* Pthread_key_create TestCase */
-  test("Pthread_key_create success", &pthread_key_create_success, true, false);
+  test("Pthread_key_create", &pthread_key_create, true, false);
 
   /* Pthread_key_delete TestCase */
   test("Pthread_key_delete success", &pthread_key_delete_success, true, false);
 
-  /* Pthread_getspecific TestCase */
-  test("Pthread_getspecific success", &pthread_getspecific_success, true, false);
-
-  /* Pthread_setspecific TestCase */
-  test("Pthread_setspecific success", &pthread_setspecific_success, true, false);
+  /* Pthread_getspecific and setspecific TestCase */
+  test("Pthread_getspecific and setspecific success", &pthread_setspecific_getspecific_success, true, false);
+  test("Pthread_setspecific and setspecific EINVAL", &pthread_setspecific_getspecific_EINVAL, true, false);
 
   /* Errno TestCase */
   test("Modify errno", &errno_success, true, false);
