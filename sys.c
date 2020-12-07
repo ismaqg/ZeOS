@@ -584,9 +584,10 @@ int sys_mutex_destroy(int mutex_id)
 
     if(mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner >= 0) // Trying to unitialize a mutex that is being locked (used) in this moment.
 	return -EBUSY;
+    // note that it's not needed to check if there is any blocked thread in the mutex because if the mutex is not being used by anyone implies that there isn't any thread in the mutex queue.
 
     if((mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner < 0) || (mutexes[mutex_id].pid_owner <= 0 && mutexes[mutex_id].tid_owner > 0))
-	panic("sys_mutex_destroy");
+	panic("sys_mutex_destroy: tid vale -1 y pid no o viceversa. Eso no puede haber sucedido nunca así que si sucede indica error en la implementación");
 
     if(mutexes[mutex_id].pid_initializer != current()->PID)
 	return -EPERM;
