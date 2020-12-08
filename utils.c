@@ -84,10 +84,12 @@ int access_ok(int type, const void *addr, unsigned long size)
     if ((addr_ini >= USER_FIRST_PAGE + NUM_PAG_CODE) &&
         (addr_fin <= USER_FIRST_PAGE + NUM_PAG_CODE + NUM_PAG_DATA))
       return 1;
+    break;
   default:
     if ((addr_ini >= USER_FIRST_PAGE) &&
         (addr_fin <= (USER_FIRST_PAGE + NUM_PAG_CODE + NUM_PAG_DATA)))
       return 1;
+    break;
   }
   return 0;
 }

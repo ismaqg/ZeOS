@@ -23,7 +23,6 @@
 #define true 1
 #define false 0
 
-
 // This is used to calculate the logical page number of the user_stack of the thread whith tid = TID.
 // It is based on that the masterthread (tid = 0) owns the 20th page of user data (NUM_PAG_DATA is 20).
 // remember that we use the user data pages for user global data and user stack(s).
@@ -245,6 +244,9 @@ void sys_exit()
     struct task_struct *tmp = list_head_to_task_struct(pos);
 
     // TODO (isma) : mover esto a una funcion ya que la sys_mutex_destroy deberia hacer algo parecido no?
+    // TODO (alex) : teniendo en cuenta que pid_owner y tid_owner se refiere a QUIEN TIENE EL LOCK COGIDO, esto no deberia destruir el mutex sino desbloquearlo.
+		//Y no te haría falta iterar sobre el vector de mutex para cada thread del proceso sino una única vez: Si el que tiene el lock es CUALQUIER THREAD 
+		//del proceso que estoy matando, desbloquea el mutex. Y en funcion de si añadimos el campo pid_initializer pues ahí sí DESTRUYELO.
     for (int i = 0; i < MAX_MUTEXES; i++)
     {
       if (mutexes[i].pid_owner == tmp->PID && mutexes[i].tid_owner == tmp->TID)
@@ -522,8 +524,7 @@ int sys_pthread_join(int TID, int *retval)
 	if(current()->joined == t_thread_to_join_with) // isma: if I'm trying to join the same thread that joined me
 		return -EDEADLK;
  
-
-	if(t_thread_to_join_with->joined != NULL) // isma: the thread i'm trying to join with was already joined by another thread
+	if(t_thread_to_join_with->joined != NULL) // isma: the thread i'm trying to join with was already joined by another thread	
 		return -EINVAL;
 
 	if(t_thread_to_join_with->state != ST_ZOMBIE){ // isma: the thread i'm trying to join hasn't finished its execution yet.
@@ -557,8 +558,8 @@ int sys_pthread_join(int TID, int *retval)
 	free_frame(get_frame(process_PT, user_stack_VPN));
     	del_ss_pag(process_PT, user_stack_VPN);
 
-	t_thread_to_join_with->PID = -1; // isma: no es necesario
-	t_thread_to_join_with->TID = -1; // isma: no es necesario
+	t_thread_to_join_with->PID = -1; // not needed. Just for consistency with other functions
+	t_thread_to_join_with->TID = -1; // not needed. Just for consistency with other functions
 	list_del(&(t_thread_to_join_with->list_threads)); // isma: lo quitamos de la cola de threads del proceso
 	list_add_tail(&(t_thread_to_join_with->list), &freequeue); // isma: liberamos su task_struct
 		
@@ -567,12 +568,39 @@ int sys_pthread_join(int TID, int *retval)
 
 int sys_mutex_init()
 {
-  return 39;
+  	for(int i = 0; i < MAX_MUTEXES; i++){
+		if(!mutexes[i].initialized){
+			mutexes[i].initialized = true;
+			INIT_LIST_HEAD(&(mutexes[i].blockedqueue));
+			mutexes[i].pid_initializer = current()->PID;
+			return i; // returns the mutex identifier that has been initialized.
+		}
+	}
+	return -EAGAIN; // all the mutexes already initialized
 }
 
 int sys_mutex_destroy(int mutex_id)
-{
-  return 40;
+{ 
+    if(mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
+	return -EINVAL;
+
+    if(mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner >= 0) // Trying to unitialize a mutex that is being locked (used) in this moment.
+	return -EBUSY;
+    // note that it's not needed to check if there is any blocked thread in the mutex because if the mutex is not being used by anyone implies that there isn't any thread in the mutex queue.
+
+    if((mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner < 0) || (mutexes[mutex_id].pid_owner <= 0 && mutexes[mutex_id].tid_owner > 0))
+	panic("sys_mutex_destroy: tid vale -1 y pid no o viceversa. Eso no puede haber sucedido nunca así que si sucede indica error en la implementación");
+
+    if(mutexes[mutex_id].pid_initializer != current()->PID)
+	return -EPERM;
+
+    mutexes[mutex_id].pid_owner = -1;
+    mutexes[mutex_id].pid_owner = -1;
+    DESTROY_LIST_HEAD(&(mutexes[mutex_id].blockedqueue));
+    mutexes[mutex_id].initialized = false;
+    mutexes[mutex_id].pid_initializer = -1;
+
+    return 0;
 }
 
 int sys_mutex_lock(int mutex_id)
