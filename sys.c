@@ -20,6 +20,9 @@
 #define LECTURA 0
 #define ESCRIPTURA 1
 
+#define true 1
+#define false 0
+
 
 // This is used to calculate the logical page number of the user_stack of the thread whith tid = TID.
 // It is based on that the masterthread (tid = 0) owns the 20th page of user data (NUM_PAG_DATA is 20).
@@ -582,12 +585,25 @@ int sys_mutex_unlock(int mutex_id)
 
 int sys_pthread_key_create()
 {
-  return 43;
+	/* initializing a TLS position for the calling thread */
+	for(int i = 0; i < TLS_SIZE; i++){
+		if(!(current()->TLS[i].used)){
+			current()->TLS[i].used = true;
+			return i; // returns the initialized position
+		}
+	}
+	// there isn't any free position in calling thread's TLS
+	return -EAGAIN; 
 }
 
 int sys_pthread_key_delete(int key)
 {
-  return 44;
+	/* if the position is unitialized or doesn't exit: EINVAL */
+  	if(key < 0 || key >= TLS_SIZE || !current()->TLS[key].used)
+		return -EINVAL;
+	/* else, we unitialize that position */
+	current()->TLS[key].used = false;
+	return 0;
 }
 
 void *sys_pthread_getspecific(int key)
