@@ -426,13 +426,13 @@ int sys_pthread_create(int *TID, void *(*wrap_routine)(), void *(*start_routine)
   /* Prepare new_task context for task_switch */
 
   // Get the position of the current EBP in the new_task system stack
-  int ebp_index = KERNEL_STACK_SIZE - 18; // 5 HW CTX | 11 SW CTX | 1 @pthread_create_handler | 1 previous EBP
+  int ebp_index = KERNEL_STACK_SIZE - 18; // 5 HW CTX | 11 SW CTX | 1 @ret_syscalls_handler | 1 previous EBP
 
   // Get the position of the current HW EIP in the new_task system stack
-  int hw_eip_index = KERNEL_STACK_SIZE - 5; // 5 HW CTX | 11 SW CTX | 1 @pthread_create_handler | 1 previous EBP
+  int hw_eip_index = KERNEL_STACK_SIZE - 5; // 5 HW CTX | 11 SW CTX | 1 @ret_syscalls_handler | 1 previous EBP
 
   // Get the position of the current HW ESP in the new_task system stack
-  int hw_esp_index = KERNEL_STACK_SIZE - 2; // 5 HW CTX | 11 SW CTX | 1 @pthread_create_handler | 1 previous EBP
+  int hw_esp_index = KERNEL_STACK_SIZE - 2; // 5 HW CTX | 11 SW CTX | 1 @ret_syscalls_handler | 1 previous EBP
 
   // Inject @wrap_routine in the new_task HW EIP
   new_task_union->stack[hw_eip_index] = (unsigned long)wrap_routine;
