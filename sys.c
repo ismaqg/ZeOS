@@ -690,12 +690,70 @@ int sys_mutex_destroy(int mutex_id)
 
 int sys_mutex_lock(int mutex_id)
 {
-  return 41;
+  // The identifier is invalid or the mutex is not initialized
+  if (mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
+    return -EINVAL;
+
+  if (mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner >= 0)
+  {
+    // Locking a mutex already owned by me would produce a deadlock
+    if (mutexes[mutex_id].pid_owner == current()->PID && mutexes[mutex_id].tid_owner == current()->TID)
+      return -EDEADLK;
+
+    // The mutex has already an owner, so block until I get the ownership
+    current()->state = ST_BLOCKED;
+    list_del(&(current()->list));
+    list_add_tail(&(current()->list), &(mutexes[mutex_id].blockedqueue));
+
+    switch (sched_next_decide_level())
+    {
+    case 2:
+      sched_next_rr_level2();
+      break;
+    case 1:
+      sched_next_rr_level1();
+      break;
+    default:
+      // Switch to idle_task as the readyqueue is empty
+      panic("sys_mutex_lock executed letting all the system blocked");
+      sched_next_rr(idle_task);
+      break;
+    }
+  }
+
+  mutexes[mutex_id].pid_owner = current()->PID;
+  mutexes[mutex_id].tid_owner = current()->TID;
+
+  return 0;
 }
 
 int sys_mutex_unlock(int mutex_id)
 {
-  return 42;
+  // The identifier is invalid or the mutex is not initialized
+  if (mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
+    return -EINVAL;
+
+  // Cannot unlock a mutex not owned by me
+  if (mutexes[mutex_id].pid_owner != current()->PID && mutexes[mutex_id].tid_owner != current()->TID)
+    return -EPERM;
+
+  mutexes[mutex_id].pid_owner = -1;
+  mutexes[mutex_id].tid_owner = -1;
+
+  // Pass ownership
+  if (!list_empty(&(mutexes[mutex_id].blockedqueue)))
+  {
+    struct list_head *tmp = list_first(&(mutexes[mutex_id].blockedqueue));
+    struct task_struct *next_owner = list_head_to_task_struct(tmp);
+    list_del(&(next_owner->list));
+
+    mutexes[mutex_id].pid_owner = next_owner->PID;
+    mutexes[mutex_id].tid_owner = next_owner->TID;
+    next_owner->state = ST_READY;
+    list_add_tail(&(next_owner->list), &readyqueue);
+  }
+
+  return 0;
 }
 
 int sys_pthread_key_create()
