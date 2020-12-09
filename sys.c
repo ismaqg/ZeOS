@@ -33,6 +33,9 @@ struct mutex_t mutexes[MAX_MUTEXES];
 
 void *get_ebp();
 
+// Avoid implicit declaration
+int sys_mutex_destroy(int mutex_id);
+
 int check_fd(int fd, int permissions)
 {
   if (fd != 1)
@@ -234,6 +237,64 @@ void sys_exit()
   if (current()->TID != 0)
     return;
 
+  /* Manage mutexes where the current process is implicated */
+
+  for (int i = 0; i < MAX_MUTEXES; i++)
+  {
+    // If im the process who initialized the mutex, unblock all the blocked threads and destroy it
+    if (mutexes[i].pid_initializer == current()->PID)
+    {
+      struct list_head *pos;
+      list_for_each(pos, &(mutexes[i].blockedqueue))
+      {
+        struct task_struct *tmp = list_head_to_task_struct(pos);
+
+        tmp->state = ST_READY;
+        list_del(&(tmp->list));
+        list_add_tail(&(tmp->list), &readyqueue);
+      }
+
+      // Ensure no one has ownership
+      mutexes[i].pid_owner = -1;
+      mutexes[i].tid_owner = -1;
+
+      sys_mutex_destroy(i);
+    }
+    else // The current process didn't initialize the mutex
+    {
+      // Delete any blocked thread of the current process from the blockedqueue of the mutex
+      struct list_head *pos;
+      list_for_each(pos, &(mutexes[i].blockedqueue))
+      {
+        struct task_struct *tmp = list_head_to_task_struct(pos);
+
+        if (tmp->PID == current()->PID)
+        {
+          list_del(&(tmp->list));
+        }
+      }
+
+      // If im the owner of the mutex pass ownership
+      if (mutexes[i].pid_owner == current()->PID)
+      {
+        mutexes[i].pid_owner = -1;
+        mutexes[i].tid_owner = -1;
+
+        if (!list_empty(&(mutexes[i].blockedqueue)))
+        {
+          struct list_head *tmp = list_first(&(mutexes[i].blockedqueue));
+          struct task_struct *next_owner = list_head_to_task_struct(tmp);
+          list_del(&(next_owner->list));
+
+          mutexes[i].pid_owner = next_owner->PID;
+          mutexes[i].tid_owner = next_owner->TID;
+          next_owner->state = ST_READY;
+          list_add_tail(&(next_owner->list), &readyqueue);
+        }
+      }
+    }
+  }
+
   int threads_num = 0;
 
   /* Remove resources from all the threads of the current process */
@@ -242,21 +303,6 @@ void sys_exit()
   list_for_each(pos, current()->threads_process)
   {
     struct task_struct *tmp = list_head_to_task_struct(pos);
-
-    // TODO (isma) : mover esto a una funcion ya que la sys_mutex_destroy deberia hacer algo parecido no?
-    // TODO (alex) : teniendo en cuenta que pid_owner y tid_owner se refiere a QUIEN TIENE EL LOCK COGIDO, esto no deberia destruir el mutex sino desbloquearlo.
-    //Y no te haría falta iterar sobre el vector de mutex para cada thread del proceso sino una única vez: Si el que tiene el lock es CUALQUIER THREAD
-    //del proceso que estoy matando, desbloquea el mutex. Y en funcion de si añadimos el campo pid_initializer pues ahí sí DESTRUYELO.
-    for (int i = 0; i < MAX_MUTEXES; i++)
-    {
-      if (mutexes[i].pid_owner == tmp->PID && mutexes[i].tid_owner == tmp->TID)
-      {
-        mutexes[i].pid_owner = -1;
-        mutexes[i].tid_owner = -1;
-        DESTROY_LIST_HEAD(&(mutexes[i].blockedqueue));
-        mutexes[i].initialized = 0;
-      }
-    }
 
     tmp->PID = -1;
     tmp->TID = -1;
@@ -476,6 +522,8 @@ void sys_pthread_exit(int retval)
   current()->retval = retval;
   current()->state = ST_ZOMBIE;
 
+  // TODO (isma): if i own a mutex and do pthread exit i should pass the ownership to the next blocked thread if any!!!
+
   if (threads_in_the_process_counter == 1)
   {
     // isma: solo quedo yo en el process (o los demás que quedan son zombies y nadie les había joineado).
@@ -675,15 +723,27 @@ int sys_pthread_key_delete(int key)
   // Uninitialize the entry indicated by key
   current()->TLS[key].value = NULL;
   current()->TLS[key].used = false;
+
   return 0;
 }
 
 void *sys_pthread_getspecific(int key)
 {
-  return (void *)45;
+  // Check invalid key or if it is not initialized
+  if (key < 0 || key >= TLS_SIZE || !current()->TLS[key].used)
+    return (void *)(-EINVAL);
+
+  return current()->TLS[key].value;
 }
 
 int sys_pthread_setspecific(int key, void *value)
 {
-  return 46;
+  // Check invalid key or if it is not initialized
+  if (key < 0 || key >= TLS_SIZE || !current()->TLS[key].used)
+    return -EINVAL;
+
+  // Store value into the TLS entry indicated by key
+  current()->TLS[key].value = value;
+
+  return 0;
 }

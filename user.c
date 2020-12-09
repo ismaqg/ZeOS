@@ -53,10 +53,6 @@ main(void)
   // AS THERE IS NOT ENOUGH SPACE IN THE SCREEN FOR ALL THE TESTS OUTPUTS PLEASE
   // ENABLE THE TESTS YOU WANT IN ORDER TO SEE THEM ALL (UNCOMMENT THEM).
 
-  /* Write TestCase */
-  // test("Write success", &write_success, true); // TODO : REMOVE
-  // test("Write fails invalid file descriptor", &write_fails_invalid_file_descriptor, false); // TODO : REMOVE
-
   /* Fork TestCase */
   // test("Fork success", &fork_success, true);
   // test("Fork fails calling thread is not master", &fork_fails_calling_thread_is_not_master, false); // TODO : CHANGE
@@ -91,15 +87,15 @@ main(void)
   // test("Mutex_unlock success", &mutex_unlock_success, false);
 
   /* Pthread_key_create TestCase */
-  // test("Pthread_key_create", &pthread_key_create_test, false);
+  // test("Pthread_key_create success and EAGAIN", &pthread_key_create_test, false);
 
   /* Pthread_key_delete TestCase */
   // test("Pthread_key_delete success", &pthread_key_delete_success, false);
   // test("Pthread_key_delete EINVAL", &pthread_key_delete_EINVAL, false);
 
   /* Pthread_getspecific and setspecific TestCase */
-  // test("Pthread_getspecific and setspecific success", &pthread_setspecific_getspecific_success, false);
-  // test("Pthread_setspecific and setspecific EINVAL", &pthread_setspecific_getspecific_EINVAL, false);
+  // test("Pthread_getspecific and setspecific success", &pthread_getspecific_setspecific_success, false);
+  // test("Pthread_setspecific and setspecific EINVAL", &pthread_getspecific_setspecific_EINVAL, false);
 
   /* Errno TestCase */
   // test("Modify errno", &errno_success, false); // TODO : ENHANCE

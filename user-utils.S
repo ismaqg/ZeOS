@@ -268,7 +268,7 @@ ENTRY(thread_start_routine)
 	movl 12(%ebp), %esi // arg
 
 	pushl %esi
-	call %ebx // start_routine(arg)
+	call *%ebx // start_routine(arg)
 	popl %esi
 
 	// Terminate current thread calling pthread_exit
