@@ -46,8 +46,8 @@ int pthread_key_delete_success(void);
 int pthread_key_delete_EINVAL(void);
 
 /* Pthread_getspecific and setspecific TestCase */
-int pthread_setspecific_getspecific_success(void);
-int pthread_setspecific_getspecific_EINVAL(void);
+int pthread_getspecific_setspecific_success(void);
+int pthread_getspecific_setspecific_EINVAL(void);
 
 /* Errno TestCase */
 int errno_success(void);

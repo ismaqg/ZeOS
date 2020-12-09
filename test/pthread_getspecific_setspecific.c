@@ -1,16 +1,31 @@
 #include <libc.h>
 
-int pthread_setspecific_getspecific_success(void)
-{
-    int key = pthread_key_create();
-    int e = pthread_setspecific(key, (void*)123);
-    if(e < 0) return false;
-    void* ret = pthread_getspecific(key);
+void* funcion_testeo(void* arg){
+	int key = pthread_key_create();
+	int e = pthread_setspecific(key, arg);
+	if (e < 0)
+		return false;
+	void* ret = pthread_getspecific(key);
 
-    return (ret == (void*)123);
+	return ret;
 }
 
-int pthread_setspecific_getspecific_EINVAL(void){
+int pthread_getspecific_setspecific_success(void)
+{
+	int key = pthread_key_create();
+	int e = pthread_setspecific(key, (void *)123);
+	if (e < 0)
+		return false;
+	void *ret1 = pthread_getspecific(key);
+
+	int TID, ret2;
+	pthread_create(&TID, funcion_testeo, (void*) 555);
+	pthread_join(TID, &ret2);
+
+	return (ret1 == (void *)123 && ret2 == 555);
+}
+
+int pthread_getspecific_setspecific_EINVAL(void){
 
 	int e;
 

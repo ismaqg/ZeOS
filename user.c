@@ -105,8 +105,8 @@ main(void)
   test("Pthread_key_delete EINVAL", &pthread_key_delete_EINVAL, true, false);
 
   /* Pthread_getspecific and setspecific TestCase */
-  test("Pthread_getspecific and setspecific success", &pthread_setspecific_getspecific_success, true, false);
-  test("Pthread_setspecific and setspecific EINVAL", &pthread_setspecific_getspecific_EINVAL, true, false);
+  test("Pthread_getspecific and setspecific success", &pthread_getspecific_setspecific_success, true, false);
+  test("Pthread_setspecific and setspecific EINVAL", &pthread_getspecific_setspecific_EINVAL, true, false);
 
   /* Errno TestCase */
 //  test("Modify errno", &errno_success, true, false);
