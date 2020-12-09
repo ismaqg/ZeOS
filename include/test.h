@@ -3,15 +3,15 @@
 
 /* Write TestCase */
 int write_success(void);
-int write_fails_invalid_file_descriptor(void);
+int write_fails_invalid_file_descriptor(void); // TODO : change
 
 /* Fork TestCase */
 int fork_success(void);
-int fork_fails_calling_thread_is_not_master(void);
+int fork_fails_calling_thread_is_not_master(void); // TODO : change
 
 /* Exit TestCase */
 int exit_success(void);
-int exit_fails_calling_thread_is_not_master(void);
+int exit_fails_calling_thread_is_not_master(void); // TODO : change
 
 /* Pthread_create TestCase */
 int pthread_create_success(void);
