@@ -25,7 +25,7 @@ void printvar(int var);
     {                        \
     }
 
-void delay(int seconds);
+void delay(unsigned long ticks);
 
 int write(int fd, char *buffer, int size);
 

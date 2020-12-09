@@ -77,11 +77,11 @@ void printvar(int var)
   print(buffer);
 }
 
-void delay(int seconds)
+void delay(unsigned long ticks)
 {
-  int now = gettime();
-  // 500 seems to be the avg ticks within a second
-  while (now + (seconds * 500) >= gettime())
+  unsigned long now = gettime();
+  // Users have to specifcy ticks because the time equivalence (seconds/ticks) is machine dependent in ZeOS
+  while (now + ticks >= gettime())
   {
   }
 }
