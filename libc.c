@@ -76,3 +76,11 @@ void printvar(int var)
   itoa(var, buffer);
   print(buffer);
 }
+
+void delay(int seconds)
+{
+  int now = gettime();
+  while (now + (seconds * 500) >= gettime())
+  {
+  }
+}

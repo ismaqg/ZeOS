@@ -241,11 +241,14 @@ void sys_exit()
 
   for (int i = 0; i < MAX_MUTEXES; i++)
   {
+    if (!mutexes[i].initialized)
+      continue;
+
     // If im the process who initialized the mutex, unblock all the blocked threads and destroy it
     if (mutexes[i].pid_initializer == current()->PID)
     {
-      struct list_head *pos;
-      list_for_each(pos, &(mutexes[i].blockedqueue))
+      struct list_head *pos, *aux;
+      list_for_each_safe(pos, aux, &(mutexes[i].blockedqueue))
       {
         struct task_struct *tmp = list_head_to_task_struct(pos);
 
@@ -254,7 +257,7 @@ void sys_exit()
         list_add_tail(&(tmp->list), &readyqueue);
       }
 
-      // Ensure no one has ownership
+      // Ensure no one has ownership (in order to call sys_mutex_destroy correctly)
       mutexes[i].pid_owner = -1;
       mutexes[i].tid_owner = -1;
 
@@ -263,8 +266,8 @@ void sys_exit()
     else // The current process didn't initialize the mutex
     {
       // Delete any blocked thread of the current process from the blockedqueue of the mutex
-      struct list_head *pos;
-      list_for_each(pos, &(mutexes[i].blockedqueue))
+      struct list_head *pos, *aux;
+      list_for_each_safe(pos, aux, &(mutexes[i].blockedqueue))
       {
         struct task_struct *tmp = list_head_to_task_struct(pos);
 
@@ -522,7 +525,32 @@ void sys_pthread_exit(int retval)
   current()->retval = retval;
   current()->state = ST_ZOMBIE;
 
-  // TODO (isma): if i own a mutex and do pthread exit i should pass the ownership to the next blocked thread if any!!!
+  /* Manage mutexes where the current thread is implicated */
+
+  for (int i = 0; i < MAX_MUTEXES; i++)
+  {
+    if (!mutexes[i].initialized)
+      continue;
+
+    // If im the owner of the mutex pass ownership
+    if (mutexes[i].pid_owner == current()->PID && mutexes[i].tid_owner == current()->TID)
+    {
+      mutexes[i].pid_owner = -1;
+      mutexes[i].tid_owner = -1;
+
+      if (!list_empty(&(mutexes[i].blockedqueue)))
+      {
+        struct list_head *tmp = list_first(&(mutexes[i].blockedqueue));
+        struct task_struct *next_owner = list_head_to_task_struct(tmp);
+        list_del(&(next_owner->list));
+
+        mutexes[i].pid_owner = next_owner->PID;
+        mutexes[i].tid_owner = next_owner->TID;
+        next_owner->state = ST_READY;
+        list_add_tail(&(next_owner->list), &readyqueue);
+      }
+    }
+  }
 
   if (threads_in_the_process_counter == 1)
   {
@@ -671,7 +699,7 @@ int sys_mutex_destroy(int mutex_id)
   // Note that it's not needed to check if there is any blocked thread in the mutex because if the
   // mutex is not being used by anyone implies that there isn't any thread in the mutex queue.
 
-  // TODO : delete useless check
+  // TODO : delete debug
   if ((mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner < 0) || (mutexes[mutex_id].pid_owner <= 0 && mutexes[mutex_id].tid_owner > 0))
     panic("sys_mutex_destroy: tid vale -1 y pid no o viceversa. Eso no puede haber sucedido nunca así que si sucede indica error en la implementación");
 
@@ -702,7 +730,6 @@ int sys_mutex_lock(int mutex_id)
 
     // The mutex has already an owner, so block until I get the ownership
     current()->state = ST_BLOCKED;
-    list_del(&(current()->list));
     list_add_tail(&(current()->list), &(mutexes[mutex_id].blockedqueue));
 
     switch (sched_next_decide_level())
