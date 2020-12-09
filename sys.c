@@ -33,6 +33,9 @@ struct mutex_t mutexes[MAX_MUTEXES];
 
 void *get_ebp();
 
+// Avoid implicit declaration
+int sys_mutex_destroy(int mutex_id);
+
 int check_fd(int fd, int permissions)
 {
   if (fd != 1)
@@ -137,7 +140,7 @@ int sys_fork(void)
   {
     /* Map one child page to parent's address space. */
     set_ss_pag(parent_PT, TOTAL_PAGES - NUM_PAG_DATA + pag, get_frame(process_PT, PAG_LOG_INIT_DATA + pag));
-    copy_data((void *)((PAG_LOG_INIT_DATA+pag) << 12), (void *)((TOTAL_PAGES - NUM_PAG_DATA + pag) << 12), PAGE_SIZE);
+    copy_data((void *)((PAG_LOG_INIT_DATA + pag) << 12), (void *)((TOTAL_PAGES - NUM_PAG_DATA + pag) << 12), PAGE_SIZE);
     del_ss_pag(parent_PT, TOTAL_PAGES - NUM_PAG_DATA + pag);
   }
   /* Deny access to the child's memory space */
@@ -234,6 +237,67 @@ void sys_exit()
   if (current()->TID != 0)
     return;
 
+  /* Manage mutexes where the current process is implicated */
+
+  for (int i = 0; i < MAX_MUTEXES; i++)
+  {
+    if (!mutexes[i].initialized)
+      continue;
+
+    // If im the process who initialized the mutex, unblock all the blocked threads and destroy it
+    if (mutexes[i].pid_initializer == current()->PID)
+    {
+      struct list_head *pos, *aux;
+      list_for_each_safe(pos, aux, &(mutexes[i].blockedqueue))
+      {
+        struct task_struct *tmp = list_head_to_task_struct(pos);
+
+        tmp->state = ST_READY;
+        list_del(&(tmp->list));
+        list_add_tail(&(tmp->list), &readyqueue);
+      }
+
+      // Ensure no one has ownership (in order to call sys_mutex_destroy correctly)
+      mutexes[i].pid_owner = -1;
+      mutexes[i].tid_owner = -1;
+
+      sys_mutex_destroy(i);
+    }
+    else // The current process didn't initialize the mutex
+    {
+      // Delete any blocked thread of the current process from the blockedqueue of the mutex
+      struct list_head *pos, *aux;
+      list_for_each_safe(pos, aux, &(mutexes[i].blockedqueue))
+      {
+        struct task_struct *tmp = list_head_to_task_struct(pos);
+
+        if (tmp->PID == current()->PID)
+        {
+          list_del(&(tmp->list));
+        }
+      }
+
+      // If im the owner of the mutex pass ownership
+      if (mutexes[i].pid_owner == current()->PID)
+      {
+        mutexes[i].pid_owner = -1;
+        mutexes[i].tid_owner = -1;
+
+        if (!list_empty(&(mutexes[i].blockedqueue)))
+        {
+          struct list_head *tmp = list_first(&(mutexes[i].blockedqueue));
+          struct task_struct *next_owner = list_head_to_task_struct(tmp);
+          list_del(&(next_owner->list));
+
+          mutexes[i].pid_owner = next_owner->PID;
+          mutexes[i].tid_owner = next_owner->TID;
+          next_owner->state = ST_READY;
+          list_add_tail(&(next_owner->list), &readyqueue);
+        }
+      }
+    }
+  }
+
   int threads_num = 0;
 
   /* Remove resources from all the threads of the current process */
@@ -242,21 +306,6 @@ void sys_exit()
   list_for_each(pos, current()->threads_process)
   {
     struct task_struct *tmp = list_head_to_task_struct(pos);
-
-    // TODO (isma) : mover esto a una funcion ya que la sys_mutex_destroy deberia hacer algo parecido no?
-    // TODO (alex) : teniendo en cuenta que pid_owner y tid_owner se refiere a QUIEN TIENE EL LOCK COGIDO, esto no deberia destruir el mutex sino desbloquearlo.
-		//Y no te haría falta iterar sobre el vector de mutex para cada thread del proceso sino una única vez: Si el que tiene el lock es CUALQUIER THREAD 
-		//del proceso que estoy matando, desbloquea el mutex. Y en funcion de si añadimos el campo pid_initializer pues ahí sí DESTRUYELO.
-    for (int i = 0; i < MAX_MUTEXES; i++)
-    {
-      if (mutexes[i].pid_owner == tmp->PID && mutexes[i].tid_owner == tmp->TID)
-      {
-        mutexes[i].pid_owner = -1;
-        mutexes[i].tid_owner = -1;
-        DESTROY_LIST_HEAD(&(mutexes[i].blockedqueue));
-        mutexes[i].initialized = 0;
-      }
-    }
 
     tmp->PID = -1;
     tmp->TID = -1;
@@ -451,197 +500,335 @@ int sys_pthread_create(int *TID, void *(*wrap_routine)(), void *(*start_routine)
 
 void sys_pthread_exit(int retval)
 {
-	if(current()->TID == 0) // isma: si es el masterthread, que el pthread_exit se convierta en un exit
-		sys_exit();
+  // If the master thread calls pthread_exit terminate the current process
+  if (current()->TID == 0)
+    sys_exit();
 
+  // If a thread joined me, unblock it
+  struct task_struct *joined;
+  if ((joined = current()->joined) != NULL)
+  {
+    joined->state = ST_READY;
+    list_del(&(joined->list));
+    list_add_tail(&(joined->list), &readyqueue);
+  }
 
-	struct task_struct* t;
-        if((t = current()->joined) != NULL){ // isma: t es la &task_struct de quien hizo join conmigo. (NULL si nadie)
-		t->state = ST_READY;
-        	list_del(&(t->list)); // isma: unblock the thread who joined me
-		list_add_tail(&(t->list), &readyqueue);
-        }
+  struct list_head *pos;
+  int threads_in_the_process_counter = 0;
+  list_for_each(pos, current()->threads_process)
+  { // isma: threads_process is a reference to the sentinel of the threads queue of a certain process
+    struct task_struct *t_aux = list_head_to_task_struct(pos);
+    if (t_aux->state != ST_ZOMBIE)
+      threads_in_the_process_counter++;
+  }
 
-	struct list_head *pos;
-	int threads_in_the_process_counter = 0;
-	list_for_each(pos, current()->threads_process){ // isma: threads_process is a reference to the sentinel of the threads queue of a certain process
-		struct task_struct *t_aux = list_head_to_task_struct(pos);
-		if(t_aux->state != ST_ZOMBIE)
-			threads_in_the_process_counter++;
-	}
+  current()->retval = retval;
+  current()->state = ST_ZOMBIE;
 
-	current()->retval = retval;
-	current()->state = ST_ZOMBIE;
+  /* Manage mutexes where the current thread is implicated */
 
-	if(threads_in_the_process_counter == 1){ // isma: solo quedo yo en el process (o los demás que quedan son zombies y nadie les había joineado). 
-		panic("thread_exit: Queda solo 1 thread en el proceso y no es el masterthread"); // isma: Si fuese el master_thread ya habría saltado a sys_exit en el primer if de sys_pthread_exit
-		sys_exit();
-	}
-	else if(threads_in_the_process_counter > 1){
-		switch(sched_next_decide_level()){ 
-			case 2: // isma: the other threads of the same process are blocked but there are other processes in ready. El unico caso donde se me ocurre que puede ocurrir esto sin que sea un desastre absoluto es cuando estan haciendo cosas sobre un mutex junto a OTRO proceso, si no nada les podría desbloquear.
-				sched_next_rr_level2(); 
-				break;
-			case 1: // isma: some other thread(s) of the same process is (are) ready
-				sched_next_rr_level1();
-				break;
-			default: // empty ready_queue
-				panic("pthread_exit: Nos hemos quedado en un sistema en el que todo está bloqueado");
-				sched_next_rr(idle_task);
-				break;
-		  }
-	}
-	else{
-		panic("thread_exit: el contador de threads dice que hay 0 threads en el proceso\n");
-	}
+  for (int i = 0; i < MAX_MUTEXES; i++)
+  {
+    if (!mutexes[i].initialized)
+      continue;
 
-	// isma: Los recursos del thread no serán liberados hasta que otro thread haga join con este o hasta que se haga sys_exit sobre el proceso.
+    // If im the owner of the mutex pass ownership
+    if (mutexes[i].pid_owner == current()->PID && mutexes[i].tid_owner == current()->TID)
+    {
+      mutexes[i].pid_owner = -1;
+      mutexes[i].tid_owner = -1;
 
+      if (!list_empty(&(mutexes[i].blockedqueue)))
+      {
+        struct list_head *tmp = list_first(&(mutexes[i].blockedqueue));
+        struct task_struct *next_owner = list_head_to_task_struct(tmp);
+        list_del(&(next_owner->list));
+
+        mutexes[i].pid_owner = next_owner->PID;
+        mutexes[i].tid_owner = next_owner->TID;
+        next_owner->state = ST_READY;
+        list_add_tail(&(next_owner->list), &readyqueue);
+      }
+    }
+  }
+
+  if (threads_in_the_process_counter == 1)
+  {
+    // isma: solo quedo yo en el process (o los demás que quedan son zombies y nadie les había joineado).
+    // isma: Si fuese el master_thread ya habría saltado a sys_exit en el primer if de sys_pthread_exit
+    panic("sys_pthread_exit executed with only the calling thread ready and it's not the master thread");
+    sys_exit();
+  }
+  else if (threads_in_the_process_counter > 1)
+  {
+    switch (sched_next_decide_level())
+    {
+    case 2:
+      // isma: the other threads of the same process are blocked but there are other processes in ready.
+      // El unico caso donde se me ocurre que puede ocurrir esto sin que sea un desastre absoluto es cuando
+      // estan haciendo cosas sobre un mutex junto a OTRO proceso, si no nada les podría desbloquear.
+      sched_next_rr_level2();
+      break;
+    case 1:
+      // isma: some other thread(s) of the same process is (are) ready
+      sched_next_rr_level1();
+      break;
+    default:
+      // Switch to idle_task as the readyqueue is empty
+      panic("sys_pthread_exit executed letting all the system blocked");
+      sched_next_rr(idle_task);
+      break;
+    }
+  }
+  else
+  {
+    // isma: Si fuese el master_thread ya habría saltado a sys_exit en el primer if de sys_pthread_exit
+    panic("sys_pthread_exit executed without ready threads and the calling thread is not the master thread");
+  }
+
+  // isma: Los recursos del thread no serán liberados hasta que otro thread haga join con este o hasta que se haga sys_exit sobre el proceso.
 }
 
 int sys_pthread_join(int TID, int *retval)
 {
-	if(TID == current()->TID)
-		return -EDEADLK; // isma: joining itself
-  
-	if(retval != NULL && !access_ok(VERIFY_WRITE, retval, sizeof(int))) // isma: si retval no es NULL significa que quieren que machaquemos el contenido apuntado por ese puntero, así que miramos que el acceso sea bueno (que no nos hayan pasado, por ejemplo, puntero a zona de código o a zona a la que el usuario no tiene permisos)
-		return -EFAULT;
-		
+  // Joining myself would produce a deadlock
+  if (TID == current()->TID)
+    return -EDEADLK;
 
-	struct list_head *pos;
-	struct task_struct *t_thread_to_join_with = NULL;
-	list_for_each(pos, current()->threads_process){ // isma: threads_process is a reference to the sentinel of the threads queue of a certain process
-		struct task_struct *t_aux = list_head_to_task_struct(pos);
-		if(TID == t_aux->TID){
-			t_thread_to_join_with = t_aux;
-			break;
-		}
-	}
+  // Check retval if wanted
+  if (retval != NULL && !access_ok(VERIFY_WRITE, retval, sizeof(int))) // isma: si retval no es NULL significa que quieren que machaquemos el contenido apuntado por ese puntero, así que miramos que el acceso sea bueno (que no nos hayan pasado, por ejemplo, puntero a zona de código o a zona a la que el usuario no tiene permisos)
+    return -EFAULT;
 
-	if(t_thread_to_join_with == NULL) // isma: there isn't any thread with that TID in the process
-		return -ESRCH;
+  struct list_head *pos;
+  struct task_struct *t_thread_to_join_with = NULL;
+  list_for_each(pos, current()->threads_process)
+  { // isma: threads_process is a reference to the sentinel of the threads queue of a certain process
+    struct task_struct *t_aux = list_head_to_task_struct(pos);
+    if (TID == t_aux->TID)
+    {
+      t_thread_to_join_with = t_aux;
+      break;
+    }
+  }
 
-	if(current()->joined == t_thread_to_join_with) // isma: if I'm trying to join the same thread that joined me
-		return -EDEADLK;
- 
-	if(t_thread_to_join_with->joined != NULL) // isma: the thread i'm trying to join with was already joined by another thread	
-		return -EINVAL;
+  // There isn't any thread with that TID in the process
+  if (t_thread_to_join_with == NULL)
+    return -ESRCH;
 
-	if(t_thread_to_join_with->state != ST_ZOMBIE){ // isma: the thread i'm trying to join hasn't finished its execution yet.
-		t_thread_to_join_with->joined = current(); //isma: that thread is officialy joined by me
-		current()->state = ST_BLOCKED;
-		list_add_tail(&(current()->list), &blockedqueue); // isma: we block until that thread finishes its execution
-		switch(sched_next_decide_level()){ 
-			case 2: 
-				//isma: Todos los demás threads del proceso están bloqueados. El unico caso donde se me ocurre que puede ocurrir esto sin que sea un desastre absoluto es cuando estan haciendo cosas sobre un mutex junto a OTRO proceso, si no nada les podría desbloquear.
-				sched_next_rr_level2(); 
-				break;
-			case 1: 
-				sched_next_rr_level1();
-				break;
-			default: 
-				panic("pthread_join: Nos hemos quedado en un sistema en el que todo está bloqueado");
-				sched_next_rr(idle_task);
-				break;
-		}
-	}
+  // Trying to join the same thread that joined me would produce a deadlock
+  if (current()->joined == t_thread_to_join_with)
+    return -EDEADLK;
 
-	// isma: this point will be reached when the thread_to_join_with finish its execution (exits).
+  // Cannot join a tread which is already joined by someone else
+  if (t_thread_to_join_with->joined != NULL)
+    return -EINVAL;
 
-	if(retval != NULL)
-		*retval = t_thread_to_join_with->retval;
+  // If the thread i'm trying to join with hasn't finished its execution yet, block until it finishes its execution
+  if (t_thread_to_join_with->state != ST_ZOMBIE)
+  {
+    t_thread_to_join_with->joined = current(); // That thread is officially joined by me
+    current()->state = ST_BLOCKED;
+    list_add_tail(&(current()->list), &blockedqueue);
 
-	// isma: Liberamos recursos del thread_to_join_with (que ha acabado ejecucion):
+    switch (sched_next_decide_level())
+    {
+    case 2:
+      //isma: Todos los demás threads del proceso están bloqueados. El unico caso donde se me ocurre
+      // que puede ocurrir esto sin que sea un desastre absoluto es cuando estan haciendo cosas sobre
+      // un mutex junto a OTRO proceso, si no nada les podría desbloquear.
+      sched_next_rr_level2();
+      break;
+    case 1:
+      sched_next_rr_level1();
+      break;
+    default:
+      // Switch to idle_task as the readyqueue is empty
+      panic("sys_pthread_join executed letting all the system blocked");
+      sched_next_rr(idle_task);
+      break;
+    }
+  }
 
-	int user_stack_VPN = THREAD_USER_STACK_PAGE(TID);
-	page_table_entry *process_PT = get_PT(t_thread_to_join_with); // isma: dado que son threads del mismo proceso, esta PT es la misma que la PT de current()
-	free_frame(get_frame(process_PT, user_stack_VPN));
-    	del_ss_pag(process_PT, user_stack_VPN);
+  // This point will be reached when the thread_to_join_with finish its execution (exits).
 
-	t_thread_to_join_with->PID = -1; // not needed. Just for consistency with other functions
-	t_thread_to_join_with->TID = -1; // not needed. Just for consistency with other functions
-	list_del(&(t_thread_to_join_with->list_threads)); // isma: lo quitamos de la cola de threads del proceso
-	list_add_tail(&(t_thread_to_join_with->list), &freequeue); // isma: liberamos su task_struct
-		
-	return 0;
+  if (retval != NULL)
+    *retval = t_thread_to_join_with->retval;
+
+  /* Free resources of thread_to_join_with as it terminated */
+
+  int user_stack_VPN = THREAD_USER_STACK_PAGE(TID);
+  page_table_entry *process_PT = get_PT(t_thread_to_join_with); // isma: dado que son threads del mismo proceso, esta PT es la misma que la PT de current()
+  free_frame(get_frame(process_PT, user_stack_VPN));
+  del_ss_pag(process_PT, user_stack_VPN);
+
+  t_thread_to_join_with->PID = -1;                           // not needed. Just for consistency with other functions
+  t_thread_to_join_with->TID = -1;                           // not needed. Just for consistency with other functions
+  list_del(&(t_thread_to_join_with->list_threads));          // isma: lo quitamos de la cola de threads del proceso
+  list_add_tail(&(t_thread_to_join_with->list), &freequeue); // isma: liberamos su task_struct
+
+  return 0;
 }
 
 int sys_mutex_init()
 {
-  	for(int i = 0; i < MAX_MUTEXES; i++){
-		if(!mutexes[i].initialized){
-			mutexes[i].initialized = true;
-			INIT_LIST_HEAD(&(mutexes[i].blockedqueue));
-			mutexes[i].pid_initializer = current()->PID;
-			return i; // returns the mutex identifier that has been initialized.
-		}
-	}
-	return -EAGAIN; // all the mutexes already initialized
+  for (int i = 0; i < MAX_MUTEXES; i++)
+  {
+    if (!mutexes[i].initialized)
+    {
+      mutexes[i].initialized = true;
+      INIT_LIST_HEAD(&(mutexes[i].blockedqueue));
+      mutexes[i].pid_initializer = current()->PID;
+      return i; // Returns the mutex identifier that has been initialized.
+    }
+  }
+
+  // There isn't any mutex left, all have been already initialized
+  return -EAGAIN;
 }
 
 int sys_mutex_destroy(int mutex_id)
-{ 
-    if(mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
-	return -EINVAL;
+{
+  // The identifier is invalid or the mutex is not initialized
+  if (mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
+    return -EINVAL;
 
-    if(mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner >= 0) // Trying to unitialize a mutex that is being locked (used) in this moment.
-	return -EBUSY;
-    // note that it's not needed to check if there is any blocked thread in the mutex because if the mutex is not being used by anyone implies that there isn't any thread in the mutex queue.
+  // Cannot destroy a mutex that is being used (locked) at this moment
+  if (mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner >= 0)
+    return -EBUSY;
 
-    if((mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner < 0) || (mutexes[mutex_id].pid_owner <= 0 && mutexes[mutex_id].tid_owner > 0))
-	panic("sys_mutex_destroy: tid vale -1 y pid no o viceversa. Eso no puede haber sucedido nunca así que si sucede indica error en la implementación");
+  // Note that it's not needed to check if there is any blocked thread in the mutex because if the
+  // mutex is not being used by anyone implies that there isn't any thread in the mutex queue.
 
-    if(mutexes[mutex_id].pid_initializer != current()->PID)
-	return -EPERM;
+  // TODO : delete debug
+  if ((mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner < 0) || (mutexes[mutex_id].pid_owner <= 0 && mutexes[mutex_id].tid_owner > 0))
+    panic("sys_mutex_destroy: tid vale -1 y pid no o viceversa. Eso no puede haber sucedido nunca así que si sucede indica error en la implementación");
 
-    mutexes[mutex_id].pid_owner = -1;
-    mutexes[mutex_id].pid_owner = -1;
-    DESTROY_LIST_HEAD(&(mutexes[mutex_id].blockedqueue));
-    mutexes[mutex_id].initialized = false;
-    mutexes[mutex_id].pid_initializer = -1;
+  // The mutex can only be destroyed by the initializer process
+  if (mutexes[mutex_id].pid_initializer != current()->PID)
+    return -EPERM;
 
-    return 0;
+  mutexes[mutex_id].pid_owner = -1;
+  mutexes[mutex_id].tid_owner = -1;
+  DESTROY_LIST_HEAD(&(mutexes[mutex_id].blockedqueue));
+  mutexes[mutex_id].initialized = false;
+  mutexes[mutex_id].pid_initializer = -1;
+
+  return 0;
 }
 
 int sys_mutex_lock(int mutex_id)
 {
-  return 41;
+  // The identifier is invalid or the mutex is not initialized
+  if (mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
+    return -EINVAL;
+
+  if (mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner >= 0)
+  {
+    // Locking a mutex already owned by me would produce a deadlock
+    if (mutexes[mutex_id].pid_owner == current()->PID && mutexes[mutex_id].tid_owner == current()->TID)
+      return -EDEADLK;
+
+    // The mutex has already an owner, so block until I get the ownership
+    current()->state = ST_BLOCKED;
+    list_add_tail(&(current()->list), &(mutexes[mutex_id].blockedqueue));
+
+    switch (sched_next_decide_level())
+    {
+    case 2:
+      sched_next_rr_level2(); // isma : el mutex esta siendo compartido con algun thread de otro proceso
+      break;
+    case 1:
+      sched_next_rr_level1();
+      break;
+    default:
+      // Switch to idle_task as the readyqueue is empty
+      panic("sys_mutex_lock executed letting all the system blocked");
+      sched_next_rr(idle_task);
+      break;
+    }
+  }
+
+  mutexes[mutex_id].pid_owner = current()->PID;
+  mutexes[mutex_id].tid_owner = current()->TID;
+
+  return 0;
 }
 
 int sys_mutex_unlock(int mutex_id)
 {
-  return 42;
+  // The identifier is invalid or the mutex is not initialized
+  if (mutex_id < 0 || mutex_id >= MAX_MUTEXES || !mutexes[mutex_id].initialized)
+    return -EINVAL;
+
+  // Cannot unlock a mutex not owned by me
+  if (mutexes[mutex_id].pid_owner != current()->PID && mutexes[mutex_id].tid_owner != current()->TID)
+    return -EPERM;
+
+  mutexes[mutex_id].pid_owner = -1;
+  mutexes[mutex_id].tid_owner = -1;
+
+  // Pass ownership
+  if (!list_empty(&(mutexes[mutex_id].blockedqueue)))
+  {
+    struct list_head *tmp = list_first(&(mutexes[mutex_id].blockedqueue));
+    struct task_struct *next_owner = list_head_to_task_struct(tmp);
+    list_del(&(next_owner->list)); // Delete next_owner from the mutex's blockedqueue
+
+    mutexes[mutex_id].pid_owner = next_owner->PID;
+    mutexes[mutex_id].tid_owner = next_owner->TID;
+    next_owner->state = ST_READY;
+    list_add_tail(&(next_owner->list), &readyqueue);
+  }
+
+  return 0;
 }
 
 int sys_pthread_key_create()
 {
-	/* initializing a TLS position for the calling thread */
-	for(int i = 0; i < TLS_SIZE; i++){
-		if(!(current()->TLS[i].used)){
-			current()->TLS[i].used = true;
-			return i; // returns the initialized position
-		}
-	}
-	// there isn't any free position in calling thread's TLS
-	return -EAGAIN; 
+  // Initialize a TLS entry for the calling thread
+  for (int i = 0; i < TLS_SIZE; i++)
+  {
+    if (!(current()->TLS[i].used))
+    {
+      current()->TLS[i].used = true;
+      return i; // Returns the initialized entry key
+    }
+  }
+
+  // There isn't any free entry in calling thread's TLS
+  return -EAGAIN;
 }
 
 int sys_pthread_key_delete(int key)
 {
-	/* if the position is unitialized or doesn't exit: EINVAL */
-  	if(key < 0 || key >= TLS_SIZE || !current()->TLS[key].used)
-		return -EINVAL;
-	/* else, we unitialize that position */
-	current()->TLS[key].used = false;
-	return 0;
+  // Cannot delete a TLS entry with an invalid key or if it is already uninitialized
+  if (key < 0 || key >= TLS_SIZE || !current()->TLS[key].used)
+    return -EINVAL;
+
+  // Uninitialize the entry indicated by key
+  current()->TLS[key].value = NULL; // isma : redundante pero por legibilidad
+  current()->TLS[key].used = false;
+
+  return 0;
 }
 
 void *sys_pthread_getspecific(int key)
 {
-  return (void *)45;
+  // Check invalid key or if it is not initialized
+  if (key < 0 || key >= TLS_SIZE || !current()->TLS[key].used)
+    return (void *)(-EINVAL);
+
+  return current()->TLS[key].value;
 }
 
 int sys_pthread_setspecific(int key, void *value)
 {
-  return 46;
+  // Check invalid key or if it is not initialized
+  if (key < 0 || key >= TLS_SIZE || !current()->TLS[key].used)
+    return -EINVAL;
+
+  // Store value into the TLS entry indicated by key
+  current()->TLS[key].value = value;
+
+  return 0;
 }

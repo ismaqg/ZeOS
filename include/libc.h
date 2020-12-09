@@ -25,6 +25,8 @@ void printvar(int var);
     {                        \
     }
 
+void delay(int seconds);
+
 int write(int fd, char *buffer, int size);
 
 void itoa(int a, char *b);
@@ -34,6 +36,8 @@ int strlen(char *a);
 void perror();
 
 int getpid();
+
+int gettime();
 
 int fork();
 

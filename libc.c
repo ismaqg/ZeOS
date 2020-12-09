@@ -76,3 +76,12 @@ void printvar(int var)
   itoa(var, buffer);
   print(buffer);
 }
+
+void delay(int seconds)
+{
+  int now = gettime();
+  // 500 seems to be the avg ticks within a second
+  while (now + (seconds * 500) >= gettime())
+  {
+  }
+}

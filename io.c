@@ -147,6 +147,7 @@ void panic(char *string)
 {
   printk_color("\n[ERROR]: ", 0x04);
   printk_color(string, 0x04);
+  breakpoint;
 }
 
 void int_to_string(int a, char *b)

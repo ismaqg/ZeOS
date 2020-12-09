@@ -11,7 +11,6 @@
 #include <utils.h>
 #include <p_stats.h>
 
-
 /**
  * Container for the Task array and 2 additional pages (the first and the last one)
  * to protect against out of bound accesses.
@@ -27,7 +26,6 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
   return list_entry( l, struct task_struct, list);
 }
 #endif
-
 
 extern struct list_head blocked;
 
