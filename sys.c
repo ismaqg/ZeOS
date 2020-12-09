@@ -735,7 +735,7 @@ int sys_mutex_lock(int mutex_id)
     switch (sched_next_decide_level())
     {
     case 2:
-      sched_next_rr_level2();
+      sched_next_rr_level2(); // isma : el mutex esta siendo compartido con algun thread de otro proceso
       break;
     case 1:
       sched_next_rr_level1();
@@ -772,7 +772,7 @@ int sys_mutex_unlock(int mutex_id)
   {
     struct list_head *tmp = list_first(&(mutexes[mutex_id].blockedqueue));
     struct task_struct *next_owner = list_head_to_task_struct(tmp);
-    list_del(&(next_owner->list));
+    list_del(&(next_owner->list)); // Delete next_owner from the mutex's blockedqueue
 
     mutexes[mutex_id].pid_owner = next_owner->PID;
     mutexes[mutex_id].tid_owner = next_owner->TID;
@@ -806,7 +806,7 @@ int sys_pthread_key_delete(int key)
     return -EINVAL;
 
   // Uninitialize the entry indicated by key
-  current()->TLS[key].value = NULL;
+  current()->TLS[key].value = NULL; // isma : redundante pero por legibilidad
   current()->TLS[key].used = false;
 
   return 0;
