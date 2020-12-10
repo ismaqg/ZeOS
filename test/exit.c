@@ -3,6 +3,7 @@
 int exit_success(void)
 {
     int ret = -1;
+
     if ((ret = fork()))
     {
         exit();
@@ -18,7 +19,25 @@ int exit_success(void)
     return (ret == 0);
 }
 
-int exit_fails_calling_thread_is_not_master(void)
+void *call_exit(void *arg)
 {
-    return false;
+    exit();
+
+    return (void *)31;
+}
+
+int exit_ignore(void)
+{
+    int ret = -1;
+    int TID, retval;
+
+    ret = pthread_create(&TID, &call_exit, NULL);
+    if (ret < 0 || TID <= 0)
+        return false;
+
+    ret = pthread_join(TID, &retval);
+    if (ret < 0 || retval != 31)
+        return false;
+
+    return true;
 }

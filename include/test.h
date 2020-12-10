@@ -3,14 +3,16 @@
 
 /* Fork TestCase */
 int fork_success(void);
-int fork_fails_calling_thread_is_not_master(void); // TODO : change
+int fork_EPERM(void);
 
 /* Exit TestCase */
 int exit_success(void);
-int exit_fails_calling_thread_is_not_master(void); // TODO : change
+int exit_ignore(void);
 
 /* Pthread_create TestCase */
 int pthread_create_success(void);
+int pthread_create_EFAULT(void);
+int pthread_create_EAGAIN(void);
 
 /* Pthread_exit TestCase */
 int pthread_exit_success(void);

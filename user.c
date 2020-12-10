@@ -12,7 +12,6 @@ int test(char *name, int (*func)(), int output)
     println("====== OUTPUT : ");
     print(name);
     print(" ======");
-    println("");
   }
   else
   {
@@ -52,17 +51,21 @@ main(void)
 
   // AS THERE IS NOT ENOUGH SPACE IN THE SCREEN FOR ALL THE TESTS OUTPUTS PLEASE
   // ENABLE THE TESTS YOU WANT IN ORDER TO SEE THEM ALL (UNCOMMENT THEM).
+  // IF YOU WANT TO SEE THE IMPLEMENTATION OF EACH TEST, JUST NAVIGATE TO:
+  // test/<feature>.c
 
   /* Fork TestCase */
   // test("Fork success", &fork_success, true);
-  // test("Fork fails calling thread is not master", &fork_fails_calling_thread_is_not_master, false); // TODO : CHANGE
+  // test("Fork EPERM", &fork_EPERM, false);
 
   /* Exit TestCase */
   // test("Exit success", &exit_success, true);
-  // test("Exit fails calling thread is not master", &exit_fails_calling_thread_is_not_master, false); // TODO : CHANGE
+  // test("Exit ignore", &exit_ignore, false);
 
   /* Pthread_create TestCase */
   // test("Pthread_create success", &pthread_create_success, false);
+  // test("Pthread_create EFAULT", &pthread_create_EFAULT, false);
+  // test("Pthread_create EAGAIN", &pthread_create_EAGAIN, false);
 
   /* Pthread_exit TestCase */
   // test("Pthread_exit success", &pthread_exit_success, false);
@@ -98,7 +101,7 @@ main(void)
   // test("Pthread_setspecific and setspecific EINVAL", &pthread_getspecific_setspecific_EINVAL, false);
 
   /* Errno TestCase */
-  // test("Modify errno", &errno_success, false); // TODO : ENHANCE
+  // test("Individual errno", &errno_success, false);
 
   while (1)
   {
