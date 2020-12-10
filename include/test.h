@@ -37,7 +37,7 @@ int mutex_lock_success(void);
 int mutex_unlock_success(void);
 
 /* Pthread_key_create TestCase */
-int pthread_key_create_test(void);
+int pthread_key_create_success_EAGAIN(void);
 
 /* Pthread_key_delete TestCase */
 int pthread_key_delete_success(void);

@@ -90,7 +90,7 @@ main(void)
   // test("Mutex_unlock success", &mutex_unlock_success, false);
 
   /* Pthread_key_create TestCase */
-  // test("Pthread_key_create success and EAGAIN", &pthread_key_create_test, false);
+  // test("Pthread_key_create success and EAGAIN", &pthread_key_create_success_EAGAIN, false);
 
   /* Pthread_key_delete TestCase */
   // test("Pthread_key_delete success", &pthread_key_delete_success, false);

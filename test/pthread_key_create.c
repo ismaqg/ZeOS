@@ -1,15 +1,24 @@
 #include <libc.h>
 
-int pthread_key_create_test(void)
+int pthread_key_create_success_EAGAIN(void)
 {
+  int ret = -1;
 
-  int e = 0, contador_keys_cogidas = 0;
-  while (e >= 0)
+  for (int i = 0; i < 100; i++)
   {
-    e = pthread_key_create();
-    if (e >= 0)
-      contador_keys_cogidas++;
+    ret = pthread_key_create();
+
+    if (i < 64) // TLS size is 64
+    {
+      if (ret < 0)
+        return false;
+    }
+    else
+    {
+      if (ret >= 0 || errno != EAGAIN)
+        return false;
+    }
   }
 
-  return (errno == EAGAIN && contador_keys_cogidas == 64); // habra tenido exito el pthread_key_create si ha sido capaz de darle 64 keys (tamaño tls) al thread pero a la número 65 ha retornado error EAGAIN.
+  return true;
 }
