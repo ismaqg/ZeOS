@@ -1,60 +1,92 @@
 #include <libc.h>
 
-void *funcion_testeo(void *arg)
+void *call_pthread_getspecific_setspecific(void *arg)
 {
-	int key = pthread_key_create();
-	int e = pthread_setspecific(key, arg);
-	if (e < 0)
-		return false;
-	void *ret = pthread_getspecific(key);
+	int ret = -1;
+	int key;
 
-	return ret;
+	key = pthread_key_create();
+	if (key < 0)
+		return (void *)0;
+
+	ret = pthread_setspecific(key, (void *)21);
+	if (ret < 0)
+		return (void *)0;
+
+	void *val = pthread_getspecific(key);
+	if ((int)val != 21)
+		return (void *)0;
+
+	return (void *)val;
 }
 
 int pthread_getspecific_setspecific_success(void)
 {
-	int key = pthread_key_create();
-	int e = pthread_setspecific(key, (void *)123);
-	if (e < 0)
+	int ret = -1;
+	int key;
+
+	key = pthread_key_create();
+	if (key < 0)
 		return false;
-	void *ret1 = pthread_getspecific(key);
 
-	int TID, ret2;
-	pthread_create(&TID, funcion_testeo, (void *)555);
-	pthread_join(TID, &ret2);
+	ret = pthread_setspecific(key, (void *)31);
+	if (ret < 0)
+		return false;
 
-	return (ret1 == (void *)123 && ret2 == 555);
+	void *val = pthread_getspecific(key);
+	if ((int)val != 31)
+		return false;
+
+	int TID, retval;
+
+	ret = pthread_create(&TID, &call_pthread_getspecific_setspecific, NULL);
+	if (ret < 0 || TID <= 0)
+		return false;
+
+	ret = pthread_join(TID, &retval);
+	if (ret < 0 || retval != 21)
+		return false;
+
+	return true;
 }
 
 int pthread_getspecific_setspecific_EINVAL(void)
 {
+	int ret = -1;
 
-	int e;
-
-	e = pthread_setspecific(-1, (void *)123);
-	if (e != -1 || errno != EINVAL)
-		return false;
-	e = pthread_setspecific(70, (void *)123);
-	if (e != -1 || errno != EINVAL)
+	ret = pthread_setspecific(-1, (void *)123);
+	if (ret >= 0 || errno != EINVAL)
 		return false;
 
-	e = (int)pthread_getspecific(-1);
-	if (e != -1 || errno != EINVAL)
+	ret = pthread_setspecific(70, (void *)123);
+	if (ret >= 0 || errno != EINVAL)
 		return false;
-	e = (int)pthread_getspecific(70);
-	if (e != -1 || errno != EINVAL)
+
+	ret = (int)pthread_getspecific(-1);
+	if (ret >= 0 || errno != EINVAL)
+		return false;
+
+	ret = (int)pthread_getspecific(70);
+	if (ret >= 0 || errno != EINVAL)
 		return false;
 
 	int key = pthread_key_create();
-	pthread_key_delete(key);
-
-	e = pthread_setspecific(key, (void *)123);
-	if (e != -1 || errno != EINVAL)
+	if (key < 0)
 		return false;
 
-	e = (int)pthread_getspecific(key);
-	if (e != -1 || errno != EINVAL)
+	ret = pthread_key_delete(key);
+	if (ret < 0)
 		return false;
 
-	return true; //todo ha funcionado como esperábamos si llegamos aqui
+	ret = pthread_setspecific(key, (void *)123);
+	if (ret >= 0 || errno != EINVAL)
+		return false;
+
+	ret = (int)pthread_getspecific(key);
+	if (ret >= 0 || errno != EINVAL)
+		return false;
+
+	// isma : todo ha funcionado como esperábamos si llegamos aqui
+
+	return true;
 }
