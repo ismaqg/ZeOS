@@ -1,46 +1,58 @@
 #include <libc.h>
 
-void *otra_funcion()
+void *call_pthread_exit(void *arg)
 {
-	println("soy el thread 2 y voy a hacer exit");
-	pthread_exit(NULL);
-	println("ESTO NUNCA DEBERÍA ESCRIBIRSE");
-	return NULL;
+	int ret = 31;
+
+	pthread_exit(ret);
+
+	ret = 21;
+
+	pthread_exit(ret);
+
+	ret = 11;
+
+	return (void *)ret;
 }
 
-void *funcion_nuevo_thread(void *argumento)
+void *call_pthread_create(void *arg)
 {
-	printvar((int)argumento);
-	/*while(1){
-		println("soy el thread 1");
-		for(int i = 0; i<10000000; i++);
-       		for(int i = 0; i<10000000; i++);
-        	for(int i = 0; i<10000000; i++);
-	}*/
-	int tid_nuevo_thread;
-	pthread_create(&tid_nuevo_thread, &otra_funcion, NULL);
-	println("soy el thread 1 y voy a hacer exit");
-	pthread_exit(NULL);
-	println("ESTO NUNCA DEBERÍA ESCRIBIRSE");
-	return NULL;
+	int ret = -1;
+	int TID, retval;
+
+	ret = pthread_create(&TID, &call_pthread_exit, NULL);
+	if (ret < 0 || TID <= 0)
+		return false;
+
+	ret = pthread_join(TID, &retval);
+	if (ret < 0 || retval != 31)
+		return false;
+
+	ret = 31;
+
+	pthread_exit(ret);
+
+	ret = 21;
+
+	pthread_exit(ret);
+
+	ret = 11;
+
+	return (void *)ret;
 }
 
 int pthread_exit_success(void)
 {
+	int ret = -1;
+	int TID, retval;
 
-	int tid_nuevo_thread;
-	pthread_create(&tid_nuevo_thread, &funcion_nuevo_thread, (void *)5);
+	ret = pthread_create(&TID, &call_pthread_create, NULL);
+	if (ret < 0 || TID <= 0)
+		return false;
 
-	while (1)
-	{
-		println("soy el thread 0");
-		for (int i = 0; i < 10000000; i++)
-			;
-		for (int i = 0; i < 10000000; i++)
-			;
-		for (int i = 0; i < 10000000; i++)
-			;
-	}
+	ret = pthread_join(TID, &retval);
+	if (ret < 0 || retval != 31)
+		return false;
 
 	return true;
 }
