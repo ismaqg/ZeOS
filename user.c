@@ -5,43 +5,7 @@ char buff[256];
 
 int pid;
 
-int test(char *name, int (*func)(), int output)
-{
-  if (output == true)
-  {
-    println("====== OUTPUT : ");
-    print(name);
-    print(" ======");
-  }
-  else
-  {
-    println("");
-  }
-
-  int passed = func();
-
-  if (output == true)
-  {
-    println("=======================");
-    for (int i = 0; i < strlen(name); i++)
-    {
-      buff[i] = '=';
-    }
-    print(buff);
-    println("");
-  }
-
-  if (passed == true)
-  {
-    print("[PASSED] TEST : ");
-    print(name);
-    return true;
-  }
-
-  print("[FAILED] TEST : ");
-  print(name);
-  return false;
-}
+int test(char *name, int (*func)(), int output);
 
 int __attribute__((__section__(".text.main")))
 main(void)
@@ -106,4 +70,42 @@ main(void)
   while (1)
   {
   }
+}
+
+int test(char *name, int (*func)(), int output)
+{
+  if (output == true)
+  {
+    println("====== OUTPUT : ");
+    print(name);
+    print(" ======");
+  }
+  else
+  {
+    println("");
+  }
+
+  int passed = func();
+
+  if (output == true)
+  {
+    println("=======================");
+    for (int i = 0; i < strlen(name); i++)
+    {
+      buff[i] = '=';
+    }
+    print(buff);
+    println("");
+  }
+
+  if (passed == true)
+  {
+    print("[PASSED] TEST : ");
+    print(name);
+    return true;
+  }
+
+  print("[FAILED] TEST : ");
+  print(name);
+  return false;
 }

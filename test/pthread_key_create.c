@@ -20,5 +20,9 @@ int pthread_key_create_success_EAGAIN(void)
     }
   }
 
+  // Clear TLS in order to execute other tests correctly
+  for (int i = 0; i < 64; i++)
+    pthread_key_delete(i);
+
   return true;
 }

@@ -69,7 +69,7 @@ int pthread_create_EAGAIN(void)
         }
     }
 
-    // Free all the created threads
+    // Free all the created threads in order to execute other tests correctly
     for (int i = 0; i < 10; i++)
     {
         if (TIDS[i] != -1)
