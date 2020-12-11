@@ -59,7 +59,7 @@ main(void)
   // test("Mutex_destroy EPERM", &mutex_destroy_EPERM, false);
 
   /* Mutex_lock and unlock TestCase */
-  // test("Mutex_lock and unlock success", &mutex_lock_unlock_success, false);
+   test("Mutex_lock and unlock success", &mutex_lock_unlock_success, false);
   // test("Mutex_lock EINVAL", &mutex_lock_EINVAL, false);
   // test("Mutex_lock EDEADLK", &mutex_lock_EDEADLK, false);
   // test("Mutex_unlock EINVAL", &mutex_unlock_EINVAL, false);

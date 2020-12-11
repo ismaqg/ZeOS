@@ -18,6 +18,10 @@ void *hola(void *argumento)
 	return (void *)1;
 }
 
+/* EXPLICACION TEST:
+Crearemos los threads A y B y nos joinearemos a continuación con B y A. Imprimiremos el retval de B y A y deberá ser '2' y '1' respectivamente.
+A continuación crearemos C y éste nunca acabará (por while(1)), así que masterthread deberá quedarse indefinidamente bloqueado en el join, sin que se
+llegue a imprimir ningún otro mensaje*/
 int pthread_join_success(void)
 {
 	int thread1_TID, thread2_TID, thread3_TID;
@@ -68,6 +72,11 @@ void *joinearme_con_quien_me_pasan_de_argumento(void *tid)
 	return 0;
 }
 
+/* EXPLICACION TEST:
+Este test debe imprimir 2 veces el codigo de error EDEADLK. La primera cuando se retorna EDEADLK por intentar joinearse consigo mismo. La segunda es porque masterthread
+está intentando joinearse con otro thread y ese otro thread está intentando joinearse con masterthread. El que haya llegado último a este joineo mútuo deberá retornar 
+EDEADLK e imprimir ese codigo de error.
+*/
 int pthread_join_EDEADLK(void)
 {
 	int e = pthread_join(0, NULL); //JOIN CONMIGO MISMO
@@ -85,6 +94,9 @@ int pthread_join_EDEADLK(void)
 	return true;
 }
 
+/* EXPLICACIÓN TEST:
+Crearemos los threads A y B. B hara join con A y masterthread hara join con A también. Uno de ellos (o B o masterthread) deberían salir del join con un EINVAL
+por estar intentando joinearse 2 al mismo y el otro sí se deberá quedar en el join. Nota que 'A' no acabará nunca porque está en un while(1) */
 int pthread_join_EINVAL(void)
 {
 	int TID1, TID2;
