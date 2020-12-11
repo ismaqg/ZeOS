@@ -33,13 +33,12 @@ int mutex_destroy_EINVAL(void);
 int mutex_destroy_EBUSY(void);
 int mutex_destroy_EPERM(void);
 
-/* Mutex_lock TestCase */
-int mutex_lock_success(void);
+/* Mutex_lock and unlock TestCase */
+int mutex_lock_unlock_success(void);
 int mutex_lock_EINVAL(void);
 int mutex_lock_EDEADLK(void);
-
-/* Mutex_unlock TestCase */
-int mutex_unlock_success(void);
+int mutex_unlock_EINVAL(void);
+int mutex_unlock_EPERM(void);
 
 /* Pthread_key_create TestCase */
 int pthread_key_create_success_EAGAIN(void);

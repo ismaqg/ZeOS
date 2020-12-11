@@ -4,15 +4,6 @@ int shared_vector[12];
 int shared_index;
 int shared_mutex;
 
-void tear_down(int *TIDS, int TIDS_size, int mutex_id)
-{
-    for (int i = 0; i < TIDS_size; i++)
-        pthread_join(TIDS[i], NULL);
-
-    mutex_unlock(mutex_id);
-    mutex_destroy(mutex_id);
-}
-
 void *modify_shared_vector(void *arg)
 {
     int ret = -1;
@@ -34,7 +25,7 @@ void *modify_shared_vector(void *arg)
     return (void *)0;
 }
 
-int mutex_lock_success(void)
+int mutex_lock_unlock_success(void)
 {
     int ret = -1;
 
@@ -52,11 +43,7 @@ int mutex_lock_success(void)
 
     ret = pthread_create(&TID, &modify_shared_vector, (void *)11);
     if (ret < 0)
-    {
-        // Free all the created threads and mutexes in order to execute other tests correctly
-        tear_down(TIDS, 1, shared_mutex);
         return false;
-    }
 
     TIDS[1] = TID;
 
@@ -66,11 +53,7 @@ int mutex_lock_success(void)
     {
         ret = mutex_lock(shared_mutex);
         if (ret < 0)
-        {
-            // Free all the created threads and mutexes in order to execute other tests correctly
-            tear_down(TIDS, 2, shared_mutex);
             return false;
-        }
 
         shared_vector[shared_index] = 31;
         shared_index++;
@@ -84,11 +67,7 @@ int mutex_lock_success(void)
 
         ret = mutex_unlock(shared_mutex);
         if (ret < 0)
-        {
-            // Free all the created threads and mutexes in order to execute other tests correctly
-            tear_down(TIDS, 2, shared_mutex);
             return false;
-        }
     }
 
     for (int i = 0; i < 12; i++)
@@ -97,27 +76,15 @@ int mutex_lock_success(void)
         {
         case 0:
             if (shared_vector[i] != 31)
-            {
-                // Free all the created threads and mutexes in order to execute other tests correctly
-                tear_down(TIDS, 2, shared_mutex);
                 return false;
-            }
             break;
         case 1:
             if (shared_vector[i] != 21)
-            {
-                // Free all the created threads and mutexes in order to execute other tests correctly
-                tear_down(TIDS, 2, shared_mutex);
                 return false;
-            }
             break;
         case 2:
             if (shared_vector[i] != 11)
-            {
-                // Free all the created threads and mutexes in order to execute other tests correctly
-                tear_down(TIDS, 2, shared_mutex);
                 return false;
-            }
             break;
         default:
             break;
@@ -125,7 +92,10 @@ int mutex_lock_success(void)
     }
 
     // Free all the created threads and mutexes in order to execute other tests correctly
-    tear_down(TIDS, 2, shared_mutex);
+    pthread_join(TIDS[0], NULL);
+    pthread_join(TIDS[1], NULL);
+    mutex_unlock(shared_mutex);
+    mutex_destroy(shared_mutex);
 
     return true;
 }

@@ -57,13 +57,12 @@ main(void)
   // test("Mutex_destroy EBUSY", &mutex_destroy_EBUSY, false);
   // test("Mutex_destroy EPERM", &mutex_destroy_EPERM, false);
 
-  /* Mutex_lock TestCase */
-  // test("Mutex_lock success", &mutex_lock_success, false);
+  /* Mutex_lock and unlock TestCase */
+  // test("Mutex_lock and unlock success", &mutex_lock_unlock_success, false);
   // test("Mutex_lock EINVAL", &mutex_lock_EINVAL, false);
   // test("Mutex_lock EDEADLK", &mutex_lock_EDEADLK, false);
-
-  /* Mutex_unlock TestCase */
-  // test("Mutex_unlock success", &mutex_unlock_success, false);
+  // test("Mutex_unlock EINVAL", &mutex_unlock_EINVAL, false);
+  // test("Mutex_unlock EPERM", &mutex_unlock_EPERM, false);
 
   /* Pthread_key_create TestCase */
   // test("Pthread_key_create success and EAGAIN", &pthread_key_create_success_EAGAIN, false);
