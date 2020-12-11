@@ -1,6 +1,6 @@
 #include <libc.h>
 
-int shared_vector[12];
+int shared_vector[180];
 int shared_index;
 int shared_mutex;
 

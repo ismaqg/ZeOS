@@ -31,7 +31,7 @@ main(void)
 
   /* Exit TestCase */
   // test("Exit success", &exit_success, true);
-  // test("Exit ignore", &exit_ignore, false);
+  // test("Exit calling thread is not master", &exit_calling_thread_is_not_master, false);
 
   /* Pthread_create TestCase */
   // test("Pthread_create success", &pthread_create_success, false);

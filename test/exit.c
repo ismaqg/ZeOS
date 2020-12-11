@@ -30,7 +30,7 @@ void *call_exit(void *arg)
     return (void *)ret;
 }
 
-int exit_ignore(void)
+int exit_calling_thread_is_not_master(void)
 {
     int ret = -1;
     int TID, retval;

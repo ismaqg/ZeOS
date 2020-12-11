@@ -7,7 +7,7 @@ int fork_EPERM(void);
 
 /* Exit TestCase */
 int exit_success(void);
-int exit_ignore(void);
+int exit_calling_thread_is_not_master(void);
 
 /* Pthread_create TestCase */
 int pthread_create_success(void);
