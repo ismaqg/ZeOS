@@ -49,7 +49,7 @@ main(void)
   // test("Pthread_join EFAULT", &pthread_join_EFAULT, false);
 
   /* Mutex_init TestCase */
-  // test("Mutex_init success", &mutex_init_success, false);
+  // test("Mutex_init success and EAGAIN", &mutex_init_success_EAGAIN, false);
 
   /* Mutex_destroy TestCase */
   // test("Mutex_destroy success", &mutex_destroy_success, false);

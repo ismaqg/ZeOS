@@ -25,7 +25,7 @@ int pthread_join_ESRCH(void);
 int pthread_join_EFAULT(void);
 
 /* Mutex_init TestCase */
-int mutex_init_success(void);
+int mutex_init_success_EAGAIN(void);
 
 /* Mutex_destroy TestCase */
 int mutex_destroy_success(void);
