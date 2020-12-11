@@ -13,10 +13,17 @@ main(void)
   /* Next line, tries to move value 0 to CR3 register. This register is a privileged one, and so it will raise an exception */
   /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
 
+  /* !! PLEASE READ BELOW !! */
+
   // AS THERE IS NOT ENOUGH SPACE IN THE SCREEN FOR ALL THE TESTS OUTPUTS PLEASE
   // ENABLE THE TESTS YOU WANT IN ORDER TO SEE THEM ALL (UNCOMMENT THEM).
-  // IF YOU WANT TO SEE THE IMPLEMENTATION OF EACH TEST, JUST NAVIGATE TO:
-  // test/<feature>.c
+  // IF YOU WANT TO SEE THE IMPLEMENTATION OF EACH TEST, JUST NAVIGATE TO: test/<feature>.c
+  // IF A TEST PASSES IT WILL OUTPUT SOMETHING LIKE: [PASSED] : <test title>
+  // OR: [FAILED] : <test title> IF IT DOES NOT PASS.
+  // IF A TEST REQUIRES SCREEN OUTPUT, THAT OUTPUT WILL BE SORROUNDED BY A BOX
+  // LIKE: ======= [OUTPUT] : <test title> =======
+
+  /* !! PLEASE READ ABOVE !! */
 
   /* Fork TestCase */
   // test("Fork success", &fork_success, true);
@@ -34,7 +41,7 @@ main(void)
   /* Pthread_exit TestCase */
   // test("Pthread_exit success", &pthread_exit_success, false);
 
-  /* Pthread_join TestCase */
+  /* Pthread_join TestCase */ // TODO : change them so that they can be executed in bulk and that they don't need to print anything
   // test("Pthread_join success", &pthread_join_success, false);
   // test("Pthread_join EDEADLK", &pthread_join_EDEADLK, false);
   // test("Pthread_join EINVAL", &pthread_join_EINVAL, false);
@@ -76,7 +83,7 @@ int test(char *name, int (*func)(), int output)
 {
   if (output == true)
   {
-    println("====== OUTPUT : ");
+    println("====== [OUTPUT] : ");
     print(name);
     print(" ======");
   }
@@ -89,7 +96,7 @@ int test(char *name, int (*func)(), int output)
 
   if (output == true)
   {
-    println("=======================");
+    println("=========================");
     for (int i = 0; i < strlen(name); i++)
     {
       buff[i] = '=';
@@ -100,12 +107,12 @@ int test(char *name, int (*func)(), int output)
 
   if (passed == true)
   {
-    print("[PASSED] TEST : ");
+    print("[PASSED] : ");
     print(name);
     return true;
   }
 
-  print("[FAILED] TEST : ");
+  print("[FAILED] : ");
   print(name);
   return false;
 }
