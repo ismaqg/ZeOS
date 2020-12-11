@@ -35,6 +35,8 @@ int mutex_destroy_EPERM(void);
 
 /* Mutex_lock TestCase */
 int mutex_lock_success(void);
+int mutex_lock_EINVAL(void);
+int mutex_lock_EDEADLK(void);
 
 /* Mutex_unlock TestCase */
 int mutex_unlock_success(void);

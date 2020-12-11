@@ -59,6 +59,8 @@ main(void)
 
   /* Mutex_lock TestCase */
   // test("Mutex_lock success", &mutex_lock_success, false);
+  // test("Mutex_lock EINVAL", &mutex_lock_EINVAL, false);
+  // test("Mutex_lock EDEADLK", &mutex_lock_EDEADLK, false);
 
   /* Mutex_unlock TestCase */
   // test("Mutex_unlock success", &mutex_unlock_success, false);

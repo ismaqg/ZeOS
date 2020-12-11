@@ -16,8 +16,8 @@ int pthread_key_delete_success(void)
 			return false;
 	}
 
-	// isma : si llegamos a este punto con e == 0 es que se han podido crear y deletear
-	// 1000 keys (deleteando una justo despues de su creacion). Nota que TLS size es 64
+	// isma : si llegamos a este punto se han podido crear y deletear 1000 keys
+	// (deleteando una justo despues de su creacion). Nota que TLS size es 64
 
 	return true;
 }

@@ -21,9 +21,13 @@ int exit_success(void)
 
 void *call_exit(void *arg)
 {
+    int ret = 31;
+
     exit();
 
-    return (void *)31;
+    ret = 21;
+
+    return (void *)ret;
 }
 
 int exit_ignore(void)
@@ -36,7 +40,7 @@ int exit_ignore(void)
         return false;
 
     ret = pthread_join(TID, &retval);
-    if (ret < 0 || retval != 31)
+    if (ret < 0 || retval != 21)
         return false;
 
     return true;
