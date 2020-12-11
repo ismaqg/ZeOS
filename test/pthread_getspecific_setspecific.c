@@ -86,7 +86,7 @@ int pthread_getspecific_setspecific_EINVAL(void)
 	if (ret >= 0 || errno != EINVAL)
 		return false;
 
-	// isma : todo ha funcionado como esperábamos si llegamos aqui
+	// isma: Todo ha funcionado como esperábamos si llegamos aqui
 
 	return true;
 }

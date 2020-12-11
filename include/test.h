@@ -51,7 +51,4 @@ int pthread_key_delete_EINVAL(void);
 int pthread_getspecific_setspecific_success(void);
 int pthread_getspecific_setspecific_EINVAL(void);
 
-/* Errno TestCase */
-int errno_success(void);
-
 #endif /* __TEST_H__ */

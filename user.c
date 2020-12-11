@@ -41,7 +41,8 @@ main(void)
   /* Pthread_exit TestCase */
   // test("Pthread_exit success", &pthread_exit_success, false);
 
-  /* Pthread_join TestCase (THIS ONE, PLEASE, ONE AT A TIME) */ // TODO : change them so that they can be executed in bulk and that they don't need to print anything
+  // TODO : change pthread_join tests so that they can be executed in bulk and that they don't need to print anything
+  /* Pthread_join TestCase (THIS ONE, PLEASE, ONE AT A TIME) */
   // test("Pthread_join success", &pthread_join_success, false);
   // test("Pthread_join EDEADLK", &pthread_join_EDEADLK, false);
   // test("Pthread_join EINVAL", &pthread_join_EINVAL, false);
@@ -74,9 +75,6 @@ main(void)
   /* Pthread_getspecific and setspecific TestCase */
   // test("Pthread_getspecific and setspecific success", &pthread_getspecific_setspecific_success, false);
   // test("Pthread_setspecific and setspecific EINVAL", &pthread_getspecific_setspecific_EINVAL, false);
-
-  /* Errno TestCase */
-  // test("Individual errno", &errno_success, false);
 
   while (1)
   {

@@ -135,7 +135,7 @@ int sys_fork(void)
   }
 
   /* Copy parent's DATA to child. We will use the range [TOTAL_PAGES-NUM_PAG_DATA..TOTAL_PAGES-1] as temp logical pages to map to */
-  // isma: si usásemos el rango [PAG_LOG_INIT_DATA+NUM_PAG_DATA..PAG_LOG_INIT_DATA+NUM_PAG_DATA+NUM_PAG_DATA] y el proceso padre tuviese varios threads, estariamos usando las user_stacks de esos otros threads, lo que estaría mal!
+  // isma: Si usásemos el rango [PAG_LOG_INIT_DATA+NUM_PAG_DATA..PAG_LOG_INIT_DATA+NUM_PAG_DATA+NUM_PAG_DATA] y el proceso padre tuviese varios threads, estariamos usando las user_stacks de esos otros threads, lo que estaría mal!
   for (pag = 0; pag < NUM_PAG_DATA; pag++)
   {
     /* Map one child page to parent's address space. */
@@ -554,7 +554,7 @@ void sys_pthread_exit(int retval)
 
   if (threads_in_the_process_counter == 1)
   {
-    // isma: solo quedo yo en el process (o los demás que quedan son zombies y nadie les había joineado).
+    // isma: Solo quedo yo en el process (o los demás que quedan son zombies y nadie les había joineado).
     // isma: Si fuese el master_thread ya habría saltado a sys_exit en el primer if de sys_pthread_exit
     panic("sys_pthread_exit executed with only the calling thread ready and it's not the master thread");
     sys_exit();
@@ -564,13 +564,13 @@ void sys_pthread_exit(int retval)
     switch (sched_next_decide_level())
     {
     case 2:
-      // isma: the other threads of the same process are blocked but there are other processes in ready.
+      // isma: The other threads of the same process are blocked but there are other processes in ready.
       // El unico caso donde se me ocurre que puede ocurrir esto sin que sea un desastre absoluto es cuando
       // estan haciendo cosas sobre un mutex junto a OTRO proceso, si no nada les podría desbloquear.
       sched_next_rr_level2();
       break;
     case 1:
-      // isma: some other thread(s) of the same process is (are) ready
+      // isma: Some other thread(s) of the same process is (are) ready
       sched_next_rr_level1();
       break;
     default:
@@ -596,7 +596,7 @@ int sys_pthread_join(int TID, int *retval)
     return -EDEADLK;
 
   // Check retval if wanted
-  if (retval != NULL && !access_ok(VERIFY_WRITE, retval, sizeof(int))) // isma: si retval no es NULL significa que quieren que machaquemos el contenido apuntado por ese puntero, así que miramos que el acceso sea bueno (que no nos hayan pasado, por ejemplo, puntero a zona de código o a zona a la que el usuario no tiene permisos)
+  if (retval != NULL && !access_ok(VERIFY_WRITE, retval, sizeof(int))) // isma: Si retval no es NULL significa que quieren que machaquemos el contenido apuntado por ese puntero, así que miramos que el acceso sea bueno (que no nos hayan pasado, por ejemplo, puntero a zona de código o a zona a la que el usuario no tiene permisos)
     return -EFAULT;
 
   struct list_head *pos;
@@ -657,14 +657,14 @@ int sys_pthread_join(int TID, int *retval)
   /* Free resources of thread_to_join_with as it terminated */
 
   int user_stack_VPN = THREAD_USER_STACK_PAGE(TID);
-  page_table_entry *process_PT = get_PT(t_thread_to_join_with); // isma: dado que son threads del mismo proceso, esta PT es la misma que la PT de current()
+  page_table_entry *process_PT = get_PT(t_thread_to_join_with); // isma: Dado que son threads del mismo proceso, esta PT es la misma que la PT de current()
   free_frame(get_frame(process_PT, user_stack_VPN));
   del_ss_pag(process_PT, user_stack_VPN);
 
   t_thread_to_join_with->PID = -1;                           // not needed. Just for consistency with other functions
   t_thread_to_join_with->TID = -1;                           // not needed. Just for consistency with other functions
-  list_del(&(t_thread_to_join_with->list_threads));          // isma: lo quitamos de la cola de threads del proceso
-  list_add_tail(&(t_thread_to_join_with->list), &freequeue); // isma: liberamos su task_struct
+  list_del(&(t_thread_to_join_with->list_threads));          // isma: Lo quitamos de la cola de threads del proceso
+  list_add_tail(&(t_thread_to_join_with->list), &freequeue); // isma: Liberamos su task_struct
 
   return 0;
 }
@@ -699,10 +699,6 @@ int sys_mutex_destroy(int mutex_id)
   // Note that it's not needed to check if there is any blocked thread in the mutex because if the
   // mutex is not being used by anyone implies that there isn't any thread in the mutex queue.
 
-  // TODO : delete debug
-  if ((mutexes[mutex_id].pid_owner > 0 && mutexes[mutex_id].tid_owner < 0) || (mutexes[mutex_id].pid_owner <= 0 && mutexes[mutex_id].tid_owner > 0))
-    panic("sys_mutex_destroy: tid vale -1 y pid no o viceversa. Eso no puede haber sucedido nunca así que si sucede indica error en la implementación");
-
   // The mutex can only be destroyed by the initializer process
   if (mutexes[mutex_id].pid_initializer != current()->PID)
     return -EPERM;
@@ -735,7 +731,7 @@ int sys_mutex_lock(int mutex_id)
     switch (sched_next_decide_level())
     {
     case 2:
-      sched_next_rr_level2(); // isma : el mutex esta siendo compartido con algun thread de otro proceso
+      sched_next_rr_level2(); // isma: El mutex esta siendo compartido con algun thread de otro proceso
       break;
     case 1:
       sched_next_rr_level1();
@@ -806,7 +802,7 @@ int sys_pthread_key_delete(int key)
     return -EINVAL;
 
   // Uninitialize the entry indicated by key
-  current()->TLS[key].value = NULL; // isma : redundante pero por legibilidad
+  current()->TLS[key].value = NULL; // isma: Redundante pero por legibilidad
   current()->TLS[key].used = false;
 
   return 0;
