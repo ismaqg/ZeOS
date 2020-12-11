@@ -41,7 +41,7 @@ main(void)
   /* Pthread_exit TestCase */
   // test("Pthread_exit success", &pthread_exit_success, false);
 
-  /* Pthread_join TestCase */ // TODO : change them so that they can be executed in bulk and that they don't need to print anything
+  /* Pthread_join TestCase (THIS ONE, PLEASE, ONE AT A TIME) */ // TODO : change them so that they can be executed in bulk and that they don't need to print anything
   // test("Pthread_join success", &pthread_join_success, false);
   // test("Pthread_join EDEADLK", &pthread_join_EDEADLK, false);
   // test("Pthread_join EINVAL", &pthread_join_EINVAL, false);
@@ -53,6 +53,9 @@ main(void)
 
   /* Mutex_destroy TestCase */
   // test("Mutex_destroy success", &mutex_destroy_success, false);
+  // test("Mutex_destroy EINVAL", &mutex_destroy_EINVAL, false);
+  // test("Mutex_destroy EBUSY", &mutex_destroy_EBUSY, false);
+  // test("Mutex_destroy EPERM", &mutex_destroy_EPERM, false);
 
   /* Mutex_lock TestCase */
   // test("Mutex_lock success", &mutex_lock_success, false);

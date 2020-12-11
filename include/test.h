@@ -29,6 +29,9 @@ int mutex_init_success_EAGAIN(void);
 
 /* Mutex_destroy TestCase */
 int mutex_destroy_success(void);
+int mutex_destroy_EINVAL(void);
+int mutex_destroy_EBUSY(void);
+int mutex_destroy_EPERM(void);
 
 /* Mutex_lock TestCase */
 int mutex_lock_success(void);
