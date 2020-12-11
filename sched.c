@@ -51,7 +51,7 @@ void init_stats(struct stats *s)
   s->remaining_ticks = get_ticks();
 }
 
-void init_tls(struct tls_t *TLS) // TODO : fix warning
+void init_tls(struct tls_t *TLS)
 {
   for (int i = 0; i < TLS_SIZE; i++)
   {
