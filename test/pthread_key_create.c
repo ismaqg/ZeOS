@@ -1,5 +1,10 @@
 #include <libc.h>
 
+/*EXPLICACIÓN TEST:
+Nuestra TLS es de 64 posiciones, así que se intentará hacer key_create 100 veces. Si alguna de las primeras 64 veces que se intenta hacer
+key_create NO tiene éxito, el test no se superará. Si una vez la TLS ya está llena (a partir de la iteración 64) se intenta hacer un key_create
+que NO acaba con error EAGAIN, el test no se superará. 
+*/
 int pthread_key_create_success_EAGAIN(void)
 {
   int ret = -1;

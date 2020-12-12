@@ -17,9 +17,17 @@ void *call_pthread_getspecific_setspecific(void *arg)
 	if ((int)val != 21)
 		return (void *)0;
 
+	ret = pthread_key_delete(key);
+	if(ret < 0) 
+		return (void *)0;
+
 	return (void *)val;
 }
 
+/* EXPLICACIÓN TEST:
+Hacemos pthread_setspecific y get_specific en masterthread y también en un thread esclavo. Si no se coge el mismo dato que se ha escrito en la TLS
+dentro de una cierta key, el test fallará. Implícitamente también se estará testeando key_create y key_delete.
+*/
 int pthread_getspecific_setspecific_success(void)
 {
 	int ret = -1;
@@ -39,17 +47,23 @@ int pthread_getspecific_setspecific_success(void)
 
 	int TID, retval;
 
-	ret = pthread_create(&TID, &call_pthread_getspecific_setspecific, NULL);
-	if (ret < 0 || TID <= 0)
+	pthread_create(&TID, &call_pthread_getspecific_setspecific, NULL);
+	pthread_join(TID, &retval);
+	if (retval != 21)
 		return false;
-
-	ret = pthread_join(TID, &retval);
-	if (ret < 0 || retval != 21)
+	
+	ret = pthread_key_delete(key);
+	if(ret < 0) 
 		return false;
 
 	return true;
 }
 
+/* EXPLICACIÓN TEST:
+Se pone a prueba todas las posibles situaciones de EINVAL (acceso a una posición de la tls más pequeña o más grande que el tamaño de la tls y acceso a una
+posición de la tls que no ha estado previamente "activada" con un key_create (sin que haya sido "desactivada" por un key_delete).
+Si todo ello ha retornado -1 y el errno = EINVAL, se habrá superado el test
+*/
 int pthread_getspecific_setspecific_EINVAL(void)
 {
 	int ret = -1;
