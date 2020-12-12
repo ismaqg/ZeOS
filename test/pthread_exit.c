@@ -3,19 +3,11 @@
 void *call_pthread_exit(void *arg)
 {
 	int ret = 31;
-
-	pthread_exit(ret);
-/*
-	// if success, this point won't be reached.
-
-	ret = 21;
-
 	pthread_exit(ret);
 
-	ret = 11;
-
-	return (void *)ret;
-*/
+	// para alex: si quieres puedes quitar este println y dejar solo el return, ya que ese último return es como 
+	// la cadenas de pthreads_exit con valores distintos a 31 que habías hecho (porque se convertira en un pthread_exit
+	// con valo distinto a 31
 	println("Si se lee este mensaje, ha fallado pthread_exit");
 	return NULL;
 }
@@ -34,19 +26,8 @@ void *call_pthread_create(void *arg)
 		return false;
 
 	ret = 31;
-
-	pthread_exit(ret);
-/*
-	// if success, this point won't be reached.
-
-	ret = 21;
-
 	pthread_exit(ret);
 
-	ret = 11;
-
-	return (void *)ret;
-*/
 	println("Si se lee este mensaje, ha fallado pthread_exit");
 	return NULL;
 }
@@ -64,20 +45,11 @@ int pthread_exit_success(void)
 {
 	//int ret = -1;
 	int TID, retval;
-/*
-	ret = pthread_create(&TID, &call_pthread_create, NULL);
-	if (ret < 0 || TID <= 0)
-		return false;
 
-	ret = pthread_join(TID, &retval);
-	if (ret < 0 || retval != 31)
-		return false;
-*/
 	pthread_create(&TID, &call_pthread_create, NULL);
 	pthread_join(TID, &retval);
 	if (retval != 31)
 		return false;
-
 
 	pthread_create(&TID, just_return, NULL);
 	pthread_join(TID, &retval);
