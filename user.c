@@ -39,7 +39,7 @@ main(void)
   // test("Pthread_create EAGAIN", &pthread_create_EAGAIN, false);
 
   /* Pthread_exit TestCase */
-   test("Pthread_exit success", &pthread_exit_success, false);
+  // test("Pthread_exit success", &pthread_exit_success, false);
 
   // TODO : change pthread_join tests so that they can be executed in bulk and that they don't need to print anything
   /* Pthread_join TestCase (THIS ONE, PLEASE, ONE AT A TIME) */
@@ -59,22 +59,22 @@ main(void)
   // test("Mutex_destroy EPERM", &mutex_destroy_EPERM, false);
 
   /* Mutex_lock and unlock TestCase */
-   test("Mutex_lock and unlock success", &mutex_lock_unlock_success, false);
+  // test("Mutex_lock and unlock success", &mutex_lock_unlock_success, false);
   // test("Mutex_lock EINVAL", &mutex_lock_EINVAL, false);
   // test("Mutex_lock EDEADLK", &mutex_lock_EDEADLK, false);
   // test("Mutex_unlock EINVAL", &mutex_unlock_EINVAL, false);
   // test("Mutex_unlock EPERM", &mutex_unlock_EPERM, false);
 
   /* Pthread_key_create TestCase */
-   test("Pthread_key_create success and EAGAIN", &pthread_key_create_success_EAGAIN, false);
+  // test("Pthread_key_create success and EAGAIN", &pthread_key_create_success_EAGAIN, false);
 
   /* Pthread_key_delete TestCase */
-   test("Pthread_key_delete success", &pthread_key_delete_success, false);
-   test("Pthread_key_delete EINVAL", &pthread_key_delete_EINVAL, false);
+  // test("Pthread_key_delete success", &pthread_key_delete_success, false);
+  // test("Pthread_key_delete EINVAL", &pthread_key_delete_EINVAL, false);
 
   /* Pthread_getspecific and setspecific TestCase */
-   test("Pthread_getspecific and setspecific success", &pthread_getspecific_setspecific_success, false);
-   test("Pthread_setspecific and setspecific EINVAL", &pthread_getspecific_setspecific_EINVAL, false);
+  // test("Pthread_getspecific and setspecific success", &pthread_getspecific_setspecific_success, false);
+  // test("Pthread_setspecific and setspecific EINVAL", &pthread_getspecific_setspecific_EINVAL, false);
 
   while (1)
   {
