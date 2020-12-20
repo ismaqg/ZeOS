@@ -34,7 +34,7 @@ int pthread_key_delete_EINVAL(void)
 	int ret = -1;
 	int key;
 
-	ret = pthread_key_delete(32);
+	ret = pthread_key_delete(32); // Como 32 es una posición que nunca se esta desinicializada debe dar error
 	if (ret >= 0 || errno != EINVAL)
 		return false;
 
@@ -57,7 +57,6 @@ int pthread_key_delete_EINVAL(void)
 	ret = pthread_key_delete(70);
 	if (ret >= 0 || errno != EINVAL)
 		return false;
-
 
 	return true;
 }

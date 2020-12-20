@@ -3,13 +3,10 @@
 void *call_pthread_exit(void *arg)
 {
 	int ret = 31;
+
 	pthread_exit(ret);
 
-	// para alex: si quieres puedes quitar este println y dejar solo el return, ya que ese último return es como 
-	// la cadenas de pthreads_exit con valores distintos a 31 que habías hecho (porque se convertira en un pthread_exit
-	// con valo distinto a 31
-	println("Si se lee este mensaje, ha fallado pthread_exit");
-	return NULL;
+	return false;
 }
 
 void *call_pthread_create(void *arg)
@@ -26,34 +23,26 @@ void *call_pthread_create(void *arg)
 		return false;
 
 	ret = 31;
-	pthread_exit(ret);
 
-	println("Si se lee este mensaje, ha fallado pthread_exit");
-	return NULL;
-}
-
-void* just_return(void* arg){
-	return (void *)25;
+	return (void *)ret;
 }
 
 /*EXPLICACIÓN TEST:
-Se va a crear un thread que tiene que hacer exit con el valor 31. Ese thread también creará otro thread que también tendrá que hacer exit con el valor 31.
-Si ambos threads no finalizan con el valor 31 significa que no hemos pasado el test.
-Finalmente se creará otro thread que hará return 25; en su funcion (lo que implicitamente deberia actuar como un pthread_exit). Así que también comprobaremos si así ha ocurrido.
+Se va a crear un thread A que creará otro thread que tendrá que hacer exit con el valor 31. Este thread A, también tendrá que hacer exit
+con el valor 31 pero esta vez de manera implícita ya que hará return 31 (lo que implicitamente deberia actuar como un pthread_exit).
+Así que también comprobaremos si así ha ocurrido. Si ambos threads no finalizan con el valor 31 significa que no hemos pasado el test.
 */
 int pthread_exit_success(void)
 {
-	//int ret = -1;
+	int ret = -1;
 	int TID, retval;
 
-	pthread_create(&TID, &call_pthread_create, NULL);
-	pthread_join(TID, &retval);
-	if (retval != 31)
+	ret = pthread_create(&TID, &call_pthread_create, NULL);
+	if (ret < 0 || TID <= 0)
 		return false;
 
-	pthread_create(&TID, just_return, NULL);
-	pthread_join(TID, &retval);
-	if(retval != 25)
+	ret = pthread_join(TID, &retval);
+	if (ret < 0 || retval != 31)
 		return false;
 
 	return true;

@@ -17,16 +17,13 @@ void *call_pthread_getspecific_setspecific(void *arg)
 	if ((int)val != 21)
 		return (void *)0;
 
-	ret = pthread_key_delete(key);
-	if(ret < 0) 
-		return (void *)0;
-
 	return (void *)val;
 }
 
 /* EXPLICACIÓN TEST:
 Hacemos pthread_setspecific y get_specific en masterthread y también en un thread esclavo. Si no se coge el mismo dato que se ha escrito en la TLS
-dentro de una cierta key, el test fallará. Implícitamente también se estará testeando key_create y key_delete.
+dentro de una cierta key, el test fallará. Se puede ver como el dato es distinto para el materthread y el thread esclavo porque la TLS es memoria
+individual. Implícitamente también se estará testeando key_create y key_delete.
 */
 int pthread_getspecific_setspecific_success(void)
 {
@@ -47,14 +44,16 @@ int pthread_getspecific_setspecific_success(void)
 
 	int TID, retval;
 
-	pthread_create(&TID, &call_pthread_getspecific_setspecific, NULL);
-	pthread_join(TID, &retval);
-	if (retval != 21)
+	ret = pthread_create(&TID, &call_pthread_getspecific_setspecific, NULL);
+	if (ret < 0 || TID <= 0)
 		return false;
-	
-	ret = pthread_key_delete(key);
-	if(ret < 0) 
+
+	ret = pthread_join(TID, &retval);
+	if (ret < 0 || retval != 21)
 		return false;
+
+	// Delete used key in order to execute other tests correctly
+	pthread_key_delete(key);
 
 	return true;
 }
