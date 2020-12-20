@@ -41,7 +41,6 @@ main(void)
   /* Pthread_exit TestCase */
   // test("Pthread_exit success", &pthread_exit_success, false);
 
-  // TODO : change pthread_join tests so that they can be executed in bulk and that they don't need to print anything
   /* Pthread_join TestCase (THIS ONE, PLEASE, ONE AT A TIME) */
   // test("Pthread_join success", &pthread_join_success, false);
   // test("Pthread_join EDEADLK", &pthread_join_EDEADLK, false);

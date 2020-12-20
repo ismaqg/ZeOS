@@ -25,6 +25,20 @@ void *modify_shared_vector(void *arg)
     return (void *)0;
 }
 
+/*
+What:
+    The current thread creates two more threads. Each one has a unique value 31, 21 and 11,
+    that must be written to the global shared vector by all of them in this order:
+    31, 21, 11, 31, 21, 11, 31, 21, 11... and so on. The ordering constraint is enforced by
+    a global shared mutex.
+
+    Notice that all the threads also access the shared vector using a shared index, which is
+    incremented by all of them in order.
+
+Expected:
+    No errors appear when using the mutex "shared_mutex", locking and unlocking it. The resulting
+    vector "shared_vector" has the unique values of each thread in the order described before.
+*/
 int mutex_lock_unlock_success(void)
 {
     int ret = -1;
@@ -100,6 +114,19 @@ int mutex_lock_unlock_success(void)
     return true;
 }
 
+/*
+What:
+    The current thread tries to perform the mutex_lock syscall with wrong params,
+    one param wrong at a time.
+
+Expected:
+    No mutex is locked when passing invalid parameters to the mutex_lock syscall.
+    The errno variable is set to EINVAL as we passed invalid parameters.
+
+    Notice that our system supports 20 mutexes and we are passing smaller or greater
+    mutex ids from the range 0-19. Also a mutex cannot be locked if it was not
+    initialized or was already destroyed before.
+*/
 int mutex_lock_EINVAL(void)
 {
     int ret = -1;
@@ -136,6 +163,17 @@ int mutex_lock_EINVAL(void)
     return true;
 }
 
+/*
+What:
+    The current thread tries to lock a mutex that has been locked before by itself.
+
+Expected:
+    The mutex_lock syscall returns error and sets the errno variable to EDEADLK as the
+    mutex has been already locked by the current thread but not unlocked. A mutex cannot
+    be locked by the same thread consecutively if the thread is the owner of the mutex,
+    as that would result in a deadlock. (Because the only thread that could unblock other
+    threads blocked at the mutex is also blocked)
+*/
 int mutex_lock_EDEADLK(void)
 {
     int ret = -1;
