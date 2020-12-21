@@ -23,6 +23,8 @@ main(void)
   // IF A TEST REQUIRES SCREEN OUTPUT, THAT OUTPUT WILL BE SORROUNDED BY A BOX
   // LIKE: ======= [OUTPUT] : <test title> =======
 
+  // NOTICE THAT THERE ARE EXPLANATIONS FOR EACH TEST ABOVE THEIR IMPLEMENTATION, READ IT!
+
   /* !! PLEASE READ ABOVE !! */
 
   /* Fork TestCase */
@@ -41,7 +43,7 @@ main(void)
   /* Pthread_exit TestCase */
   // test("Pthread_exit success", &pthread_exit_success, false);
 
-  /* Pthread_join TestCase (THIS ONE, PLEASE, ONE AT A TIME) */
+  /* Pthread_join TestCase (THIS TEST CASE, PLEASE, ONE AT A TIME, IT DOES NOT FOLLOW THE CONVENTION MENTIONED BEFORE) */
   // test("Pthread_join success", &pthread_join_success, false);
   // test("Pthread_join EDEADLK", &pthread_join_EDEADLK, false);
   // test("Pthread_join EINVAL", &pthread_join_EINVAL, false);

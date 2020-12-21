@@ -6,7 +6,7 @@
 
 #include <types.h>
 
-int errno __attribute__((section(".ErrnoSection"))); // Isma: Este cambio viene de la mano con el cambio de user.lds
+int errno __attribute__((section(".ErrnoSection"))); // See changes made in user.lds
 
 char buffer[256];
 

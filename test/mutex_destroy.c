@@ -24,10 +24,6 @@ int mutex_destroy_success(void)
             return false;
     }
 
-    // isma: Si llegamos a este punto es que se han podido crear y deletear
-    // 1000 mutexes (deleteando una justo despues de su creacion). Nota que
-    // el maximo numero de mutex en el sistema es de 20
-
     return true;
 }
 

@@ -46,7 +46,7 @@ int pthread_key_delete_EINVAL(void)
 	if (ret < 0)
 		return false;
 
-	ret = pthread_key_delete(key); // isma: Este debería fallar porque usa posicion ya desinicializada
+	ret = pthread_key_delete(key);
 	if (ret >= 0 || errno != EINVAL)
 		return false;
 

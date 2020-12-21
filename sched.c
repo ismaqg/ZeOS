@@ -134,7 +134,7 @@ void update_sched_data_rr(void)
 // 0 : Switch not needed
 // 1 : Needs switch 1st level (thread same process)
 // 2 : Needs switch 2nd level (thread different process)
-int needs_sched_rr(void) // isma: Solo se llamara en tick de reloj
+int needs_sched_rr(void)
 {
   if (list_empty(&readyqueue))
     return 0;
@@ -176,19 +176,15 @@ int needs_sched_rr(void) // isma: Solo se llamara en tick de reloj
     return 0;   // As there isn't any ready thread_same_process
   }             // continue process quantum with the current thread
 
-  // isma: Si llegamos aqui: ready NO vacia, en RUN NO idle_task y quantum proceso finalizado (<=0) SEGURO (y el de thread no se sabe)
-
   // The current process has no quantum left
 
   // If there is a ready thread_different_process switch to it
   if (thread_different_process != NULL)
     return 2;
 
-  // isma: Si llegamos aqui, como ready NO vacia, es que sé al 100% que en ready hay otros threads de mi mismo proceso (pero no de otro)
-
   // As there isn't any ready thread_different_process
   // switch to thread_same_process if current thread quantum is done
-  if (remaining_quantum_thread <= 0) // isma: Ahora sí que nos interesa saber si aparte de quantumprocess <= 0 tambien teniamos thread<=0
+  if (remaining_quantum_thread <= 0)
     return 1;
   return 0;
 }
@@ -224,8 +220,6 @@ void sched_next_rr(struct task_struct *new)
 }
 
 // Scheduler 1st level (thread same process)
-// isma: Solo entrara en esta funcion si readyqueue NO vacia
-// isma: A esta funcion solo se la llamara cuando tengamos seguro al 100% que en ready quedan threads DEL MISMO proceso
 void sched_next_rr_level1(void)
 {
   struct task_struct *thread_same_process = NULL; // Ready thread of the same process
@@ -251,8 +245,6 @@ void sched_next_rr_level1(void)
 }
 
 // Scheduler 2nd level (thread different process)
-// isma: Solo entrara en esta funcion si readyqueue NO vacia
-// isma: A esta funcion solo se la llamara cuando tengamos seguro al 100% que en ready hay otro proceso DISTINTO
 void sched_next_rr_level2(void)
 {
   struct task_struct *thread_different_process = NULL; // Ready thread of a different process
@@ -282,8 +274,6 @@ void sched_next_rr_level2(void)
 // 0 : Switch to idle_task
 // 1 : Needs switch 1st level (thread same process)
 // 2 : Needs switch 2nd level (thread different process)
-// isma: Solo se llama a esta funcion en caso de tener que forzar un task_switch (es decir, forzar que el de RUN salga de ahi).
-// alex: Como no se la llamara a partir de una interrupcion de reloj, sabemos que aqui aun queda quantum. Pero igualmente hay que forzar el task_switch
 int sched_next_decide_level(void)
 {
   if (list_empty(&readyqueue))

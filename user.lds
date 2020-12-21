@@ -17,7 +17,7 @@ SECTIONS
   .bss : { *(.bss) }            /* Uninitialized Data */
 
 
-  . = 0x109000; /*Isma: Seccion añadida en la direccion 0x109000 para almacenar errno. Ahora la variable errno tendra siempre esta direccion*/
-  .ErrnoSection : { *(.ErrnoSection) } /*Isma: Nota que ahora la cabecera de errno en el lib.c es así:
+  . = 0x109000; /* Section added at the address 0x109000 in order to store errno. Now, the errno variable will always have this address. */
+  .ErrnoSection : { *(.ErrnoSection) } /* Note that the errno initialization in lib.c is:
 				      int errno __attribute__((section(".ErrnoSection")));*/
 }

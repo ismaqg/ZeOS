@@ -3,7 +3,7 @@
 /* 
  * Initializes an empty list.
  */
-void INIT_LIST_HEAD(struct list_head *list) // isma: En el init empieza apuntandose el centinela a sí mismo
+void INIT_LIST_HEAD(struct list_head *list)
 {
 	list->next = list;
 	list->prev = list;
